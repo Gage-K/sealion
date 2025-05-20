@@ -1,7 +1,15 @@
+import SeqNode from "./components/SeqNode";
+import Sequencer from "./components/Sequencer";
+
 function App() {
   return (
     <>
-      <h1>Hello world</h1>
+      <Sequencer>
+        <SeqNode />
+        <SeqNode />
+        <SeqNode />
+        <SeqNode />
+      </Sequencer>
     </>
   );
 }
