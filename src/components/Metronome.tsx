@@ -86,7 +86,7 @@ export default function Metronome() {
           id="tempo"
           className={styles.input}
           type="number"
-          min="60"
+          min="30"
           max="240"
           value={tempo}
           onChange={handleTempoChange}
