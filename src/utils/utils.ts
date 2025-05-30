@@ -12,6 +12,7 @@ const NOTES: Octave = [
   "G#",
   "A",
   "Bb",
+  "B",
 ];
 
 export function getOctave(octPosition: number): Octave {
