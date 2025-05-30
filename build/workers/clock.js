@@ -15,9 +15,10 @@ onmessage = (e) => {
     const interval = (60 / clock.tempo) * 1000; // ms per beat
     const startTime = performance.now();
     let stepCounter = 0;
+    const logs = [];
     function scheduleNextTick() {
         // determine when the next tick should have fired since worker initialization
-        console.log(performance.now());
+        // console.log(performance.now());
         const expectedTime = startTime + stepCounter * interval;
         // current time of tick since worker initialization
         const currentTime = performance.now();
@@ -26,7 +27,12 @@ onmessage = (e) => {
         // percentage inaccuracy of tick
         const inaccuracy = (drift / interval) * 100;
         // log current step & percentage of drift inaccuracy
-        console.log(`Step: ${(stepCounter % (clock.beats * 4)) + 1}, Drift: ${drift.toFixed(2)} ms, Inaccuracy: ${inaccuracy.toFixed(2)}%`);
+        // console.log(
+        //   `Step: ${(stepCounter % (clock.beats * 4)) + 1}, Drift: ${drift.toFixed(
+        //     2
+        //   )} ms, Inaccuracy: ${inaccuracy.toFixed(2)}%`
+        // );
+        logs.push(`Step: ${(stepCounter % (clock.beats * 4)) + 1}, Drift: ${drift.toFixed(2)} ms, Inaccuracy: ${inaccuracy.toFixed(2)}%`);
         // message sent back to front end
         const output = {
             step: (stepCounter % clock.totalSteps) + 1,
@@ -38,6 +44,9 @@ onmessage = (e) => {
         stepCounter++;
         // schedule next tick, adjusted for drift
         const nextDelay = interval - drift;
+        if (stepCounter % 16 === 0) {
+            console.table(logs);
+        }
         // ensure non-negative delay
         setTimeout(scheduleNextTick, Math.max(0, nextDelay));
     }
