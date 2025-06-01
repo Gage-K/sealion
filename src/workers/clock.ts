@@ -27,7 +27,7 @@ interface ClockOutput {
 onmessage = (e) => {
   console.log("clock starting");
   const clock: Clock = e.data;
-  const interval = (60 / clock.tempo) * 1000; // ms per beat
+  const interval = ((60 / clock.tempo) * 1000) / 4;
   const startTime = performance.now();
   let stepCounter = 0;
   const logs: string[] = [];
