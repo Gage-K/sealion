@@ -1,8 +1,7 @@
 import * as Tone from "tone";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Pause, Play } from "phosphor-react";
-// import Pad from "./Pad";
 
 interface SequencerProps {
   children: React.ReactNode;
@@ -15,16 +14,37 @@ interface Clock {
   swing: number; // off-beat skew metric (percentage 0–100)
 }
 
-type Track = boolean[];
-
-interface Sequence {
-  // volume
-  // eventually, objects instead of booleans with data like volume, velocity, etc.
-  track1: Track;
-  track2: Track;
+interface Step {
+  stepNum: number; // position in sequence
+  status: boolean; // active/inactive
+  // velocity
 }
 
-const ticker = new Tone.Synth().toDestination();
+interface Track {
+  name: string;
+  instrument: string;
+  steps: Step[];
+  // volume
+}
+
+type Sequence = Track[];
+const defaultSequence: Sequence = Array.from({ length: 8 }).map(
+  (track, index) => {
+    const newTrack: Track = {
+      name: (index + 1).toString(),
+      instrument: (index + 1).toString(),
+      steps: Array.from({ length: 16 }, (_, i) => ({
+        stepNum: i + 1,
+        status: false,
+      })),
+    };
+    return newTrack;
+  }
+);
+
+Tone.start();
+
+const synth = new Tone.MembraneSynth().toDestination();
 const dotStyle =
   "w-4 h-4 rounded-sm border-b inset-shadow-sm ease-in-out duration-100";
 
@@ -39,34 +59,30 @@ const styles = {
 };
 
 export default function Sequencer({ children }: SequencerProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [tempo, setTempo] = useState(120);
-  const [timeSignature, setTimeSignature] = useState(4);
-  const [currentStep, setCurrentStep] = useState(1);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [tempo, setTempo] = useState<number>(120);
+  const [timeSignature, setTimeSignature] = useState<number>(4);
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [sequence, setSequence] = useState<Sequence>(defaultSequence);
 
   const sequenceLength = timeSignature * 4;
 
-  const generateTrack = (timeSignature: number) => {
-    const length = timeSignature * 4;
-    const track: Track = Array(length).fill(false);
-    return track;
-  };
-
-  const [track, setTrack] = useState(generateTrack(timeSignature));
-
-  // const defaultSequence: Sequence = {
-  //   track1: generateTrack(timeSignature),
-  //   track2: generateTrack(timeSignature),
-  // };
-
-  // const [sequence, setSequence] = useState(defaultSequence);
-
-  // TODO:
-  // - clicking on button updates state for that button
-  // - grid for each track
-  // - play back for each grid item on the track should be synced
+  const clockWorkerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
+    // Create the worker ONCE on mount
+    clockWorkerRef.current = new Worker("../../build/workers/clock.js");
+    const clockWorker = clockWorkerRef.current;
+
+    return () => {
+      clockWorker?.terminate();
+    };
+  }, [isPlaying, tempo]);
+
+  useEffect(() => {
+    const clockWorker = clockWorkerRef.current;
+    if (!clockWorker) return;
+
     const clockData: Clock = {
       tempo: tempo,
       beats: timeSignature,
@@ -74,24 +90,56 @@ export default function Sequencer({ children }: SequencerProps) {
       swing: 50,
     };
 
-    const clockWorker = new Worker("../../build/workers/clock.js");
-    Tone.start();
+    function handleMessage(e: MessageEvent) {
+      setCurrentStep(e.data.step);
+    }
 
     if (isPlaying) {
       clockWorker.postMessage(clockData);
-
-      clockWorker.onmessage = (e) => {
-        setCurrentStep(e.data.step);
-        if (track[e.data.step - 1] === true)
-          ticker.triggerAttackRelease("C5", "64n");
-      };
+      clockWorker.addEventListener("message", handleMessage);
+    } else {
+      clockWorker.removeEventListener("message", handleMessage);
+      setCurrentStep(1);
     }
 
     return () => {
-      clockWorker.terminate();
-      setCurrentStep(1);
+      clockWorker.removeEventListener("message", handleMessage);
     };
-  }, [isPlaying, tempo, timeSignature, sequenceLength, track]);
+  }, [isPlaying, tempo, timeSignature, sequenceLength]);
+
+  function getTrackStatus(trackIndex: number) {
+    const track = sequence[trackIndex];
+    if (track) {
+      return track.steps[currentStep - 1].status;
+    }
+    return false;
+  }
+
+  useCallback(() => {
+    sequence.map((track) => {
+      // const trackName: string = track[0];
+      if (isPlaying === false) return;
+      // if (getTrackStatus(trackName)) {
+      //   switch (true) {
+      //     case trackName === "track1":
+      //       synth.triggerAttackRelease("C0", "8n");
+      //       break;
+      //     case trackName === "track2":
+      //       synth.triggerAttackRelease("E0", "8n");
+      //       break;
+      //     case trackName === "track3":
+      //       synth.triggerAttackRelease("F0", "8n");
+      //       break;
+      //     case trackName === "track4":
+      //       synth.triggerAttackRelease("A0", "8n");
+      //       break;
+      //     case trackName === "track5":
+      //       synth.triggerAttackRelease("B0", "8n");
+      //       break;
+      //   }
+      // }
+    });
+  }, [currentStep, isPlaying]);
 
   const handleTempoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTempo = parseInt(e.target.value);
@@ -105,25 +153,27 @@ export default function Sequencer({ children }: SequencerProps) {
     setTimeSignature(newTimeSignature);
   };
 
-  // const handleStepClick = (index: number) => {
-  //   setSequence((prev: Sequence) => {
-  //     return {
-  //       ...prev,
-  //       track1: [...prev.track1, (prev.track1[index] = !prev.track1[index])],
-  //     };
-  //   });
-  // };
-  const handleStepClick = (index: number) => {
-    console.log(track[index]);
-    setTrack((prev) =>
-      prev.map((element, i) => {
-        if (i === index) {
-          return !element;
-        } else {
-          return element;
+  const handleStepClick = (trackIndex: number, stepIndex: number) => {
+    setSequence((prevSequence) => {
+      // Get the current track
+      const currentTrack = prevSequence[trackIndex];
+
+      // Map over steps and toggle the status at stepIndex
+      const updatedSteps = currentTrack.steps.map((step, index) => {
+        if (index === stepIndex - 1) {
+          return { ...step, status: !step.status };
         }
-      })
-    );
+        return step;
+      });
+
+      const updatedTrack = { ...currentTrack, steps: updatedSteps };
+
+      const updatedSequence = sequence.map((prevTrack, index) =>
+        index === trackIndex ? updatedTrack : prevTrack
+      );
+
+      return updatedSequence;
+    });
   };
 
   return (
@@ -165,46 +215,37 @@ export default function Sequencer({ children }: SequencerProps) {
         {isPlaying ? <Pause size={16} /> : <Play size={16} />}
       </button>
 
-      <div className="flex gap-2">
-        <div className="flex gap-2 items-center">
-          <h3>Track 1</h3>
-          {track.map((step, index) => {
-            return (
-              <button
-                key={index + 1}
-                onClick={() => handleStepClick(index)}
-                className={`w-8 h-8 rounded-sm cursor-pointer ${
-                  track[index] === true
-                    ? "bg-blue-400"
-                    : index + 1 === currentStep
-                    ? "bg-red-400"
-                    : "bg-neutral-300"
-                }`}></button>
-            );
-          })}
-        </div>
+      <div className="flex gap-2 flex-col">
+        {sequence.map((track, index) => {
+          const trackName = track.name;
+          const trackTitle = track.instrument;
+          const trackSteps = track.steps;
+
+          return (
+            <div className="grid grid-cols-17 gap-2" key={index}>
+              <h3>{trackTitle}</h3>
+              {trackSteps.map((step: Step) => (
+                <button
+                  onClick={() => handleStepClick(index, step.stepNum)}
+                  key={step.stepNum}
+                  aria-label={`Step ${step.stepNum} ${
+                    step.status ? "active" : "inactive"
+                  }`}
+                  className={`w-8 h-8 rounded-sm cursor-pointer ${
+                    step.status === true && step.stepNum === currentStep
+                      ? "bg-blue-400/50"
+                      : step.status === true
+                      ? "bg-blue-400"
+                      : step.stepNum === currentStep
+                      ? "bg-neutral-400"
+                      : "bg-neutral-300"
+                  }`}></button>
+              ))}
+            </div>
+          );
+        })}
       </div>
       {children}
     </>
   );
 }
-
-//   function playTestSound(): void {
-//     const synth = new Tone.Synth().toDestination();
-
-//     synth.triggerAttackRelease("C4", "8n");
-//   }
-
-//   return (
-//     <>
-//       <h2 className="font-bold text-xl">Sequencer</h2>
-//       <Pad aria="test" action={() => playTestSound()} name="test" />
-//       {children}
-//       <button
-//         className="px-4 py-2 bg-indigo-800 text-neutral-50 rounded-sm"
-//         onClick={playTestSound}>
-//         Test Sound
-//       </button>
-//     </>
-//   );
-// }
