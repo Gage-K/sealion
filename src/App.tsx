@@ -21,45 +21,46 @@ const styles = {
 };
 
 // TYPES
+interface Step {
+  note: string;
+  active: boolean;
+}
 
-const synths = [
-  new Tone.MembraneSynth().toDestination(),
-  new Tone.MembraneSynth().toDestination(),
-  new Tone.MembraneSynth().toDestination(),
-  new Tone.MembraneSynth().toDestination(),
-];
+interface Track {
+  name: string;
+  steps: Step[];
+  volume?: number;
+  active?: boolean;
+}
 
-const scale = ["C6", "C1", "C4", "C6"];
+type Sequence = Track[];
 
-const defaultTracks = [
-  [
-    { note: "C6", active: false },
-    { note: "C4", active: false },
-    { note: "C4", active: false },
-    { note: "C4", active: false },
-    { note: "C5", active: false },
-    { note: "C4", active: false },
-    { note: "C4", active: false },
-    { note: "C4", active: false },
-    { note: "C5", active: false },
-    { note: "C4", active: false },
-    { note: "C4", active: false },
-    { note: "C4", active: false },
-    { note: "C5", active: false },
-    { note: "C4", active: false },
-    { note: "C4", active: false },
-    { note: "C4", active: false },
-  ],
-  Array.from({ length: 16 }, () => ({ note: scale[2], active: false })),
-  Array.from({ length: 16 }, () => ({ note: scale[1], active: false })),
-  Array.from({ length: 16 }, () => ({ note: scale[0], active: false })),
-];
+const C_MAJOR = ["C3", "D3", "E3", "F3", "G3", "A3", "B3", "C4"];
+
+const DEFAULT_TRACK: Track = {
+  name: "track",
+  steps: Array.from({ length: 16 }, () => ({
+    note: "C4",
+    active: false,
+  })),
+  volume: 100,
+  active: true,
+};
+
+const DEFAULT_TRACK_SET: Sequence = Array.from(
+  { length: C_MAJOR.length },
+  () => DEFAULT_TRACK
+);
+
+const synths = DEFAULT_TRACK_SET.map(() =>
+  new Tone.MembraneSynth().toDestination()
+);
 
 function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [bpm, setBPM] = useState<number>(120);
   const [currentStep, setCurrentStep] = useState<number | null>(null);
-  const [sequence, setSequence] = useState(defaultTracks);
+  const [sequence, setSequence] = useState(DEFAULT_TRACK_SET);
 
   const beatRef = useRef(0);
   const sequenceRef = useRef(sequence);
@@ -71,7 +72,7 @@ function App() {
     sequenceRef.current.forEach((track, index) => {
       console.log(beatRef.current);
       const synth = synths[index];
-      const note = track[beatRef.current];
+      const note = track.steps[beatRef.current];
       if (note.active) synth.triggerAttackRelease(note.note, "16n", time);
     });
     beatRef.current = (beatRef.current + 1) % 16;
@@ -121,7 +122,7 @@ function App() {
     setSequence((prevSequence) => {
       const currentTrack = prevSequence[trackIndex];
 
-      const updatedSteps = currentTrack.map((step, index) => {
+      const updatedSteps = currentTrack.steps.map((step, index) => {
         if (index === stepIndex) {
           return { ...step, active: !step.active };
         }
@@ -129,7 +130,7 @@ function App() {
       });
 
       const updatedSequence = sequence.map((prevTrack, index) =>
-        index === trackIndex ? updatedSteps : prevTrack
+        index === trackIndex ? { ...prevTrack, steps: updatedSteps } : prevTrack
       );
       return updatedSequence;
     });
@@ -178,7 +179,7 @@ function App() {
           })} */}
           {sequence.map((track, trackIndex) => (
             <div className="grid grid-cols-17 gap-2" key={trackIndex}>
-              {track.map((step, stepIndex) => (
+              {track.steps.map((step, stepIndex) => (
                 <button
                   key={stepIndex}
                   onClick={() => updateSequence(trackIndex, stepIndex)}
