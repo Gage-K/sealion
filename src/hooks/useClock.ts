@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
-export function useClock() {
+interface Props {
+  tempo: number;
+}
+
+export function useClock({ tempo }: Props) {
   const [isPlaying, setIsPlaying] = useState<boolean>(false); // Is the clock currently counting?
   const [currentNote, setCurrentNote] = useState<number | null>(null); // What is the note/step (0–16 | null)?
 
@@ -12,11 +16,11 @@ export function useClock() {
   const clockWorkerRef = useRef<Worker | null>(null); // ClockWorker Web Worker ref preserved between renders
 
   // TODO: Make tempo, lookahead, and noteResolution states taken in as props to the hook.
-  const tempo = 80; // In beats per minute
+  // const tempo = 80; // In beats per minute
   const lookahead = 25; // In ms; frequencey to call scheduling function
   const scheduleAheadTime = 0.1; // In seconds
   const noteLength = 0.05; // In seconds
-  const noteResolution: 0 | 1 | 2 = 0; // 0: 16th, 1: 8th, 2: quarter
+  const noteResolution: 0 | 1 | 2 = 1; // 0: 16th, 1: 8th, 2: quarter
 
   useEffect(() => {
     // Fires on first mount
@@ -43,7 +47,6 @@ export function useClock() {
   function nextNote() {
     // Given the current tempo, calculate how much time a beat ought to take
     // Advance the note index
-    console.log("next note");
     const secondsPerBeat = 60 / tempo;
     nextNoteTimeRef.current += 0.25 * secondsPerBeat;
     current16thNoteRef.current = (current16thNoteRef.current + 1) % 16;
@@ -64,18 +67,17 @@ export function useClock() {
     const context = audioContextRef.current;
     if (!context) return;
 
-    console.log("tick");
     // Here add connection to Tone.js to play sounds.
 
-    const osc = context.createOscillator();
-    osc.connect(context.destination);
+    // const osc = context.createOscillator();
+    // osc.connect(context.destination);
 
-    if (beatNumber % 16 === 0) osc.frequency.value = 880.0;
-    else if (beatNumber % 4 === 0) osc.frequency.value = 440.0;
-    else osc.frequency.value = 220.0;
+    // if (beatNumber % 16 === 0) osc.frequency.value = 880.0;
+    // else if (beatNumber % 4 === 0) osc.frequency.value = 440.0;
+    // else osc.frequency.value = 220.0;
 
-    osc.start(time);
-    osc.stop(time + noteLength);
+    // osc.start(time);
+    // osc.stop(time + noteLength);
   }
 
   function scheduler() {
@@ -104,7 +106,6 @@ export function useClock() {
   }
 
   function togglePlay() {
-    console.log("toggling");
     if (!audioContextRef.current) {
       audioContextRef.current = new AudioContext();
     }

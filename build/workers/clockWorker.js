@@ -18,7 +18,6 @@
 let interval = 25; // ms
 let timerId = null;
 onmessage = (e) => {
-    console.log("running");
     if (e.data.interval) {
         interval = e.data.interval;
     }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import * as Tone from "tone";
 import { Play, Pause } from "phosphor-react";
 
@@ -9,7 +9,7 @@ interface Clock {
   swing: number; // off-beat skew metric (percentage 0–100)
 }
 
-const ticker = new Tone.Synth().toDestination();
+const ticker = new Tone.MembraneSynth().toDestination();
 const dotStyle =
   "w-4 h-4 rounded-sm border-b inset-shadow-sm ease-in-out duration-100";
 
@@ -23,46 +23,39 @@ const styles = {
     "bg-neutral-200 p-4 rounded-3xl hover:bg-neutral-300 hover:cursor-pointer hover:shadow-sm active:bg-neutral-100",
 };
 
-export default function Metronome() {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [tempo, setTempo] = useState(120);
-  const [timeSignature, setTimeSignature] = useState(4);
-  const [currentStep, setCurrentStep] = useState(1);
+interface Props {
+  tempo: number;
+  setTempo: (tempo: number) => void;
+  timeSignature: number;
+  setTimeSignature: (timeSignature: number) => void;
+  sequenceLength: number;
+  isPlaying: boolean;
+  currentNote: number | null;
+  togglePlay: () => void;
+}
 
-  const sequenceLength = timeSignature * 4;
-  const sequence = Array(sequenceLength)
-    .fill(0)
-    .map((_, i) => i + 1);
-
+export default function Metronome({
+  tempo,
+  setTempo,
+  timeSignature,
+  setTimeSignature,
+  sequenceLength,
+  isPlaying,
+  currentNote,
+  togglePlay,
+}: Props) {
   useEffect(() => {
-    const clockData: Clock = {
-      tempo: tempo,
-      beats: timeSignature,
-      totalSteps: sequenceLength,
-      swing: 50,
-    };
-
-    const clockWorker = new Worker("../../build/workers/clock.js");
-    Tone.start();
-
-    if (isPlaying) {
-      clockWorker.postMessage(clockData);
-
-      clockWorker.onmessage = (e) => {
-        setCurrentStep(e.data.step);
-        if (e.data.isFirstBeat) {
-          ticker.triggerAttackRelease("C5", "64n");
-        } else {
-          ticker.triggerAttackRelease("C4", "64n");
-        }
-      };
+    console.log(performance.now());
+    if (isPlaying && currentNote !== null) {
+      if (currentNote % 4 === 0) {
+        ticker.triggerAttackRelease("C3", "32n");
+      } else if (currentNote % 4 === 2) {
+        ticker.triggerAttackRelease("C1", "32n");
+      }
     }
+  }, [currentNote]);
 
-    return () => {
-      clockWorker.terminate();
-      setCurrentStep(1);
-    };
-  }, [isPlaying, tempo, timeSignature, sequenceLength]);
+  const sequence = useRef([...Array(sequenceLength).keys()]);
 
   const handleTempoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTempo = parseInt(e.target.value);
@@ -109,21 +102,19 @@ export default function Metronome() {
       <button
         className={styles.roundButton}
         aria-label={`${isPlaying ? "Pause" : "Play"} Audio`}
-        onClick={() => {
-          setIsPlaying((isPlaying) => !isPlaying);
-        }}>
+        onClick={togglePlay}>
         {isPlaying ? <Pause size={16} /> : <Play size={16} />}
       </button>
 
       <div className="flex gap-2">
-        {sequence.map((step, index) => {
+        {sequence.current.map((step, index) => {
           return (
             <div
               key={index}
               className={`${
-                (step - 1) % timeSignature === 0 && step === currentStep
+                step % timeSignature === 0 && step === currentNote
                   ? styles.dotActiveStart
-                  : step === currentStep
+                  : step === currentNote
                   ? styles.dotActive
                   : styles.dotInactive
               }`}></div>
