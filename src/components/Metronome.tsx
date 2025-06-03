@@ -8,7 +8,7 @@ export default function Metronome({ step }: Props) {
   return (
     <>
       <div className="grid grid-cols-17 gap-2">
-        {test.map((item, index) => (
+        {test.map((_, index) => (
           <div
             className={
               index === step && step % 4 === 0
