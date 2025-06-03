@@ -6,6 +6,8 @@ import * as Tone from "tone";
 import Metronome from "./components/Metronome";
 import Sequencer from "./components/Sequencer";
 import { useClock } from "./hooks/useClock";
+import { type Track, type Sequence, type Step } from "./types/types";
+import { getOctaveOfTracks, getTracksByScale } from "./utils/utils";
 
 const dotStyle =
   "w-4 h-4 rounded-sm border-b inset-shadow-sm ease-in-out duration-100";
@@ -20,41 +22,13 @@ const styles = {
     "bg-neutral-200 p-4 rounded-3xl hover:bg-neutral-300 hover:cursor-pointer hover:shadow-sm active:bg-neutral-100",
 };
 
-// TYPES
-interface Step {
-  note: string;
-  active: boolean;
-}
+const cMajor: Sequence = getTracksByScale("C", 4, "ionian");
+const cPentatonic: Sequence = getTracksByScale("C", 4, "pentatonic");
+console.log(cMajor);
 
-interface Track {
-  name: string;
-  steps: Step[];
-  volume?: number;
-  active?: boolean;
-}
+const DEFAULT_TRACK_SET: Sequence = cPentatonic; // specifies base octave
 
-type Sequence = Track[];
-
-const C_MAJOR = ["C3", "D3", "E3", "F3", "G3", "A3", "B3", "C4"];
-
-const DEFAULT_TRACK: Track = {
-  name: "track",
-  steps: Array.from({ length: 16 }, () => ({
-    note: "C4",
-    active: false,
-  })),
-  volume: 100,
-  active: true,
-};
-
-const DEFAULT_TRACK_SET: Sequence = Array.from(
-  { length: C_MAJOR.length },
-  () => DEFAULT_TRACK
-);
-
-const synths = DEFAULT_TRACK_SET.map(() =>
-  new Tone.MembraneSynth().toDestination()
-);
+const synths = DEFAULT_TRACK_SET.map(() => new Tone.Synth().toDestination());
 
 function App() {
   const [isPlaying, setIsPlaying] = useState(false);
