@@ -2,29 +2,15 @@
 import { useState, useEffect, useRef } from "react";
 import * as Tone from "tone";
 
-// import Keyboard from "./components/Keyboard";
+// lib
+import { type Sequence } from "./types/types";
+import { getTracksByScale } from "./utils/utils";
+import { dotStyles } from "./lib/seqStyles";
+
+// components
 import Metronome from "./components/Metronome";
-import Sequencer from "./components/Sequencer";
-import { useClock } from "./hooks/useClock";
-import { type Track, type Sequence, type Step } from "./types/types";
-import { getOctaveOfTracks, getTracksByScale } from "./utils/utils";
 
-const dotStyle =
-  "w-4 h-4 rounded-sm border-b inset-shadow-sm ease-in-out duration-100";
-
-const styles = {
-  dotInactive: `${dotStyle} bg-neutral-200 border-b-neutral-100`,
-  dotActive: `${dotStyle} bg-cyan-200 border-b-cyan-100 shadow-cyan-200/50`,
-  dotActiveStart: `${dotStyle} bg-orange-400 border-b-orange-300 shadow-orange-400/50`,
-  input: "bg-neutral-100 px-2 py-1 rounded-sm",
-  label: "font-medium",
-  roundButton:
-    "bg-neutral-200 p-4 rounded-3xl hover:bg-neutral-300 hover:cursor-pointer hover:shadow-sm active:bg-neutral-100",
-};
-
-const cMajor: Sequence = getTracksByScale("C", 4, "ionian");
 const cPentatonic: Sequence = getTracksByScale("C", 4, "pentatonic");
-console.log(cMajor);
 
 const DEFAULT_TRACK_SET: Sequence = cPentatonic; // specifies base octave
 
@@ -44,7 +30,6 @@ function App() {
     setCurrentStep(beatRef.current);
 
     sequenceRef.current.forEach((track, index) => {
-      console.log(beatRef.current);
       const synth = synths[index];
       const note = track.steps[beatRef.current];
       if (note.active) synth.triggerAttackRelease(note.note, "16n", time);
@@ -65,7 +50,6 @@ function App() {
   }, [sequence]);
 
   const togglePlay = async () => {
-    console.log(isPlaying);
     if (isPlaying) {
       Tone.getTransport().stop();
       Tone.getTransport().cancel();
@@ -80,7 +64,6 @@ function App() {
   };
 
   const handleBPMChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log(e.target.value);
     if (e.target.value) {
       const newBPM = parseInt(e.target.value);
       setBPM(newBPM);
@@ -90,9 +73,6 @@ function App() {
   };
 
   const updateSequence = (trackIndex: number, stepIndex: number) => {
-    console.log(trackIndex);
-    console.log(stepIndex);
-
     setSequence((prevSequence) => {
       const currentTrack = prevSequence[trackIndex];
 
@@ -116,12 +96,12 @@ function App() {
         <button onClick={togglePlay}>{isPlaying ? "Stop" : "Start"}</button>
 
         <form className="flex gap-4 items-center">
-          <label htmlFor="tempo" className={styles.label}>
+          <label htmlFor="tempo" className={dotStyles.label}>
             BPM
           </label>
           <input
             id="tempo"
-            className={styles.input}
+            className={dotStyles.input}
             type="number"
             min="30"
             max="240"
@@ -131,26 +111,7 @@ function App() {
         </form>
 
         <div className="flex gap-2 flex-col">
-          {/* {rows.map((row, rowIndex) => {
-            // const trackSteps = row.length;
-            return (
-              <div className="grid, grid-cols-16 gap-2" key={rowIndex}>
-                {row.map((step, stepIndex) => (
-                  <button
-                    key={stepIndex}
-                    className={`w-8, h-8 rounded-sm cursor-pointer ${
-                      step.active === true && stepIndex === beatRef.current
-                        ? "bg-blue-400/50"
-                        : step.active === true
-                        ? "bg-blue-400"
-                        : stepIndex === beatRef.current
-                        ? "bg-neutral-400"
-                        : "bg-neutral-300"
-                    }`}></button>
-                ))}
-              </div>
-            );
-          })} */}
+          <Metronome step={currentStep} />
           {sequence.map((track, trackIndex) => (
             <div className="grid grid-cols-17 gap-2" key={trackIndex}>
               {track.steps.map((step, stepIndex) => (
@@ -171,24 +132,6 @@ function App() {
             </div>
           ))}
         </div>
-        {/* <button onClick={togglePlay}>{isPlaying ? "Stop" : "Start"}</button>
-        <p>{currentNote}</p> */}
-        {/* <Metronome
-          tempo={tempo}
-          setTempo={setTempo}
-          timeSignature={timeSignature}
-          setTimeSignature={setTimeSignature}
-          sequenceLength={sequenceLength}
-          isPlaying={isPlaying}
-          togglePlay={togglePlay}
-          currentNote={currentNote}
-        /> */}
-        {/* <Sequencer>
-          <></>
-        </Sequencer> */}
-
-        {/* <h2 className="font-bold text-xl">Metronome</h2>
-        <Metronome /> */}
       </div>
     </>
   );
