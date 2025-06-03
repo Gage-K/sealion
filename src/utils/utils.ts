@@ -1,4 +1,10 @@
-export type Octave = Array<string>;
+import {
+  type Octave,
+  type Track,
+  type Sequence,
+  type Scale,
+  type ModeName,
+} from "../types/types";
 
 const NOTES: Octave = [
   "C",
@@ -13,12 +19,39 @@ const NOTES: Octave = [
   "A",
   "Bb",
   "B",
+  "C",
 ];
 
-export function getOctave(octPosition: number): Octave {
-  // desired output: ["C1", "C#1", "D1", ...]
-  // octPosition refers to the numbered octave (e.g., the "1" in "C1", or "2" in "C2")
-  // const range: number = 12;
+// INTERVALS (in semitones or st)
+// UNISON: 0 st
+// MINOR 2: 1 st
+// MAJOR 2: 2 st
+// MINOR 3: 3 st
+// MAJOR 3: 4 st
+// PERF 4: 5 st
+// AUG 4/DIM 5: 6 st
+// PERF 5: 7 st
+// MINOR 6: 8 st
+// MAJOR 6: 9 st
+// MINOR 7: 10 st
+// MAJOR 7: 11 st
+// OCTAVE: 12 st
+
+// Each scale is an array of semitones
+const MODES: Record<ModeName, Scale> = {
+  ionian: [0, 2, 4, 5, 7, 9, 11, 12], // Major scale
+  dorian: [0, 2, 3, 5, 7, 9, 10],
+  phrygian: [0, 1, 3, 5, 7, 8, 10, 12],
+  lydian: [0, 2, 4, 6, 7, 9, 11, 12],
+  mixolydian: [0, 2, 4, 5, 7, 9, 10, 12],
+  aeolian: [0, 2, 3, 5, 7, 8, 10, 12], // Natural minor scale
+  locrian: [0, 1, 3, 5, 6, 8, 10, 12],
+  pentatonic: [0, 2, 4, 7, 9, 12],
+};
+
+// Returns a full chromatic octave starting at C
+// TODO: make the starting note more flexible
+export const getOctave = (octPosition: number): Octave => {
   const octave: Octave = [];
 
   for (const note of NOTES) {
@@ -26,4 +59,55 @@ export function getOctave(octPosition: number): Octave {
     octave.push(octNote);
   }
   return octave;
-}
+};
+
+// Returns a complete Track array for a given note of a given octave
+export const getTrackOfNote = (
+  note: string,
+  octave: number,
+  trackName: string
+) => {
+  // returns a track with steps of specified note
+  const track: Track = {
+    name: trackName,
+    steps: Array.from({ length: 16 }, () => ({
+      note: `${note}${octave}`,
+      active: false,
+    })),
+    volume: 100,
+    active: true,
+  };
+
+  return track;
+};
+
+// Returns a complete sequence for each note of the chromatic scale
+export const getOctaveOfTracks = (rootOctave: number) => {
+  const sequence: Sequence = NOTES.map((note: string) =>
+    getTrackOfNote(note, rootOctave, note)
+  );
+  return sequence;
+};
+
+// Transpose the semitones of a given scale in C to a scale of the desired root note
+export const transposeScale = (scale: Scale, rootNote: number): Scale => {
+  return scale.map((semitone) => (semitone + rootNote) % 12);
+};
+
+// Returns a complete sequence of a given note, octave, and scale
+export const getTracksByScale = (
+  rootNote: string,
+  rootOctave: number,
+  scaleName: ModeName
+) => {
+  const scale: Scale = MODES[scaleName];
+  const noteIndex = NOTES.indexOf(rootNote);
+  const transposedScale = transposeScale(scale, noteIndex);
+
+  const sequence: Sequence = transposedScale.map((chromaticNoteIndex) => {
+    const noteName = NOTES[chromaticNoteIndex];
+    return getTrackOfNote(noteName, rootOctave, noteName);
+  });
+
+  return sequence;
+};
