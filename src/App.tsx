@@ -52,6 +52,8 @@ function App() {
 
   const wsRef = useRef<WebSocket | null>(null);
 
+  const localClientId = useRef(crypto.randomUUID());
+
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:8080"); // adjust port as needed
     wsRef.current = ws;
@@ -65,10 +67,15 @@ function App() {
     };
 
     ws.onmessage = (event) => {
-      console.log("[WebSocket] Message:", event.data);
-      console.log(event.data);
-      const sequenceData = JSON.parse(event.data);
-      updateSequence(sequenceData.trackIndex, sequenceData.stepIndex);
+      try {
+        const { trackIndex, stepIndex, clientId } = JSON.parse(event.data);
+        console.log(clientId == clientId);
+        if (clientId === localClientId.current) return;
+        console.log("Received message:", event.data);
+        updateSequence(trackIndex, stepIndex);
+      } catch (err) {
+        console.error("[WebSocket] JSON.parse failed:", err);
+      }
       // When we receive an incoming message
       // updateSequence with the instructions for how to change state
     };
@@ -195,12 +202,14 @@ function App() {
   };
 
   const handleSequenceChange = (trackIndex: number, stepIndex: number) => {
+    updateSequence(trackIndex, stepIndex);
+
     const updateData = {
       trackIndex,
       stepIndex,
+      clientId: localClientId.current,
     };
     wsRef.current?.send(JSON.stringify(updateData));
-    updateSequence(trackIndex, stepIndex);
   };
 
   return (
