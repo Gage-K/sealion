@@ -51,8 +51,8 @@ function App() {
   Tone.getTransport().bpm.value = bpm;
 
   const wsRef = useRef<WebSocket | null>(null);
-
   const localClientId = useRef(crypto.randomUUID());
+  const lastUpdatedIdRef = useRef<string>("");
 
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:8080"); // adjust port as needed
@@ -68,11 +68,17 @@ function App() {
 
     ws.onmessage = (event) => {
       try {
-        const { trackIndex, stepIndex, clientId } = JSON.parse(event.data);
-        console.log(localClientId.current === clientId);
+        const { trackIndex, stepIndex, clientId, updateId } = JSON.parse(
+          event.data
+        );
+
         if (clientId === localClientId.current) return;
+        if (lastUpdatedIdRef.current === updateId) return;
+
         console.log("Received message:", event.data);
+
         updateSequence(trackIndex, stepIndex);
+        lastUpdatedIdRef.current = updateId;
       } catch (err) {
         console.error("[WebSocket] JSON.parse failed:", err);
       }
@@ -131,12 +137,7 @@ function App() {
   }, []);
 
   // Handles logic for triggerign sounds on each repeat or tick of the clock
-  // TODO: fix memory leak :(
-  let repeatCount = 0;
   const repeat = useCallback((time: number) => {
-    repeatCount++;
-    console.log(`repeat call #${repeatCount}`);
-
     console.log("[Audio] Repeat started");
     setCurrentStep(beatRef.current);
 
@@ -233,6 +234,7 @@ function App() {
       trackIndex,
       stepIndex,
       clientId: localClientId.current,
+      updateId: crypto.randomUUID(),
     };
     wsRef.current?.send(JSON.stringify(updateData));
   };
