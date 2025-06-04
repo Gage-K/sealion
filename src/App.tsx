@@ -69,7 +69,7 @@ function App() {
     ws.onmessage = (event) => {
       try {
         const { trackIndex, stepIndex, clientId } = JSON.parse(event.data);
-        console.log(clientId == clientId);
+        console.log(localClientId.current === clientId);
         if (clientId === localClientId.current) return;
         console.log("Received message:", event.data);
         updateSequence(trackIndex, stepIndex);
@@ -92,8 +92,9 @@ function App() {
 
   useEffect(() => {
     if (CURRENT_MODE === "drum") {
-      const kick = new Tone.MembraneSynth().toDestination();
-
+      const kick = new Tone.MembraneSynth({
+        envelope: { attack: 0.001, decay: 0.2, sustain: 0.1, release: 0.05 },
+      }).toDestination();
       const hihat = new Tone.MetalSynth({
         envelope: { attack: 0.001, decay: 0.1, release: 0.01 },
         harmonicity: 5.1,
@@ -104,16 +105,26 @@ function App() {
 
       const snare = new Tone.NoiseSynth({
         noise: { type: "white" },
-        envelope: { attack: 0.001, decay: 0.2, sustain: 0 },
+        envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.05 },
       }).toDestination();
+
       synthsRef.current = [kick, snare, hihat];
+      console.log("[Audio Init] Drum synths created...");
+      return () => {
+        console.log("[Audio Init] Drum synth unmounted...");
+        synthsRef.current.forEach((synth) => synth.dispose());
+        synthsRef.current = [];
+      };
     } else {
       const synths = DEFAULT_TRACK_SET.map(() =>
         new Tone.Synth().toDestination()
       );
       synthsRef.current = synths;
+      console.log("[Audio Init] Drum synths created...");
 
       return () => {
+        console.log("[Audio Init] Drum synth unmounted...");
+        synthsRef.current = [];
         synths.forEach((synth) => synth.dispose());
       };
     }
@@ -121,7 +132,12 @@ function App() {
 
   // Handles logic for triggerign sounds on each repeat or tick of the clock
   // TODO: fix memory leak :(
+  let repeatCount = 0;
   const repeat = useCallback((time: number) => {
+    repeatCount++;
+    console.log(`repeat call #${repeatCount}`);
+
+    console.log("[Audio] Repeat started");
     setCurrentStep(beatRef.current);
 
     sequenceRef.current.forEach((track, index) => {
@@ -132,8 +148,10 @@ function App() {
         if (CURRENT_MODE === "drum") {
           if (synth instanceof Tone.NoiseSynth) {
             synth.triggerAttackRelease("16n", time);
-          } else {
+          } else if (synth instanceof Tone.MembraneSynth) {
             synth.triggerAttackRelease("C1", "16n", time);
+          } else if (synth instanceof Tone.MetalSynth) {
+            synth.triggerAttackRelease("C4", "16n", time);
           }
         } else {
           (synth as Tone.Synth).triggerAttackRelease(note.note, "16n", time);
@@ -143,13 +161,20 @@ function App() {
 
     beatRef.current = (beatRef.current + 1) % 16;
   }, []);
+  const scheduled = useRef(false);
 
   // Creates clock on mount and cleans it up on unmount to avoid memory leak
   useEffect(() => {
+    if (scheduled.current) return;
+    scheduled.current = true;
+
     const id = Tone.getTransport().scheduleRepeat(repeat, "16n");
 
     return () => {
       Tone.getTransport().clear(id);
+      scheduled.current = false;
+
+      console.log("[Audio] Clearing transport");
     };
   }, [repeat]);
 
