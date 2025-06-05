@@ -1,3 +1,5 @@
+import * as Tone from "tone";
+
 import {
   type Octave,
   type Track,
@@ -73,8 +75,10 @@ export const getTrackOfNote = (
       note: `${note}${octave}`,
       active: false,
     })),
-    volume: 100,
+    volume: 0, // in deciabls
+    mute: false,
     active: true,
+    node: new Tone.Gain(0),
   };
 
   return track;

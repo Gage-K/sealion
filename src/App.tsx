@@ -46,6 +46,16 @@ function App() {
   const synthsRef = useRef<
     (Tone.Synth | Tone.MembraneSynth | Tone.NoiseSynth | Tone.MetalSynth)[]
   >([]);
+  const volumeRef = useRef<Tone.Volume>(
+    new Tone.Volume({ volume: 0, mute: false })
+  );
+
+  volumeRef.current.toDestination();
+
+  // TODO: refactor to not hard code.
+  sequence[0].node.connect(volumeRef.current);
+  sequence[1].node.connect(volumeRef.current);
+  sequence[2].node.connect(volumeRef.current);
 
   // sequence.forEach((track) => console.table(track));
   Tone.getTransport().bpm.value = bpm;
@@ -97,22 +107,28 @@ function App() {
   }, []);
 
   useEffect(() => {
+    // TODO: find a way to not hardcode the track output. Want a good abstraction for later
+
+    // need a placeholder node, get it to be routed to a channel
+    // track node can have its own volume
+    // tracks get mapped to main
+    // main is set up to destination
     if (CURRENT_MODE === "drum") {
       const kick = new Tone.MembraneSynth({
         envelope: { attack: 0.001, decay: 0.2, sustain: 0.1, release: 0.05 },
-      }).toDestination();
+      }).connect(sequence[0].node); // get sent straight to output
       const hihat = new Tone.MetalSynth({
         envelope: { attack: 0.001, decay: 0.1, release: 0.01 },
         harmonicity: 5.1,
         modulationIndex: 32,
         resonance: 4000,
         octaves: 1.5,
-      }).toDestination();
+      }).connect(sequence[1].node);
 
       const snare = new Tone.NoiseSynth({
         noise: { type: "white" },
         envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.05 },
-      }).toDestination();
+      }).connect(sequence[2].node);
 
       synthsRef.current = [kick, snare, hihat];
       console.log("[Audio Init] Drum synths created...");
@@ -123,7 +139,7 @@ function App() {
       };
     } else {
       const synths = DEFAULT_TRACK_SET.map(() =>
-        new Tone.Synth().toDestination()
+        new Tone.Synth().connect(volumeRef.current)
       );
       synthsRef.current = synths;
       console.log("[Audio Init] Drum synths created...");
@@ -208,6 +224,16 @@ function App() {
     }
   };
 
+  const handleMainVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const volume = Math.min(Math.max(parseFloat(e.target.value), -12), 8);
+
+    // using a number check to guard against NaN | undefined | null
+    if (volume >= -12) {
+      volumeRef.current.volume.value = volume;
+    }
+    return;
+  };
+
   // Updates whether status of step of a track is active/inactive
   const updateSequence = (trackIndex: number, stepIndex: number) => {
     setSequence((prevSequence) => {
@@ -256,6 +282,20 @@ function App() {
             max="240"
             value={bpm}
             onChange={(e) => handleBPMChange(e)}
+          />
+
+          <label htmlFor="volume" className={dotStyles.label}>
+            Volume
+          </label>
+          <input
+            id="volume"
+            className={dotStyles.input}
+            type="range"
+            min={-12}
+            max={8}
+            step={0.01}
+            value={volumeRef.current.volume.value}
+            onChange={(e) => handleMainVolumeChange(e)}
           />
         </form>
 
