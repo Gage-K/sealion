@@ -78,7 +78,7 @@ export const getTrackOfNote = (
     volume: 0, // in deciabls
     mute: false,
     active: true,
-    node: new Tone.Gain(0),
+    node: new Tone.Gain(),
   };
 
   return track;
