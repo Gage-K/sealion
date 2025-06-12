@@ -1,0 +1,95 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import * as Tone from "tone";
+import type { Sequence } from "../types/types";
+
+/**
+ * Initializes and handles the Tone.js clock for controlling playback, triggering audio, setting beat movement, and playing metronome
+ * @param sequence
+ * @param synthsRef
+ * @param mode
+ * @returns Current step in the sequence, state of playback, and function to toggle playback
+ */
+export function useTransport(
+  sequence: Sequence,
+  synthsRef: React.RefObject<
+    (
+      | Tone.MembraneSynth
+      | Tone.NoiseSynth
+      | Tone.MetalSynth
+      | Tone.Synth<Tone.SynthOptions>
+    )[]
+  >,
+  mode: "synth" | "drum"
+) {
+  // States
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentStep, setCurrentStep] = useState<number | null>(null);
+
+  // Refs
+  const beatRef = useRef(0);
+  const sequenceRef = useRef(sequence);
+  const scheduled = useRef(false);
+
+  useEffect(() => {
+    sequenceRef.current = sequence;
+  }, [sequence]);
+
+  const repeat = useCallback(
+    (time: number) => {
+      console.log("[Audio] Repeat started");
+      setCurrentStep(beatRef.current);
+
+      sequenceRef.current.forEach((track, index) => {
+        const synth = synthsRef.current[index];
+        const note = track.steps[beatRef.current];
+
+        if (note.active) {
+          if (mode === "drum") {
+            if (synth instanceof Tone.NoiseSynth) {
+              synth.triggerAttackRelease("16n", time);
+            } else if (synth instanceof Tone.MembraneSynth) {
+              synth.triggerAttackRelease("C1", "16n", time);
+            } else if (synth instanceof Tone.MetalSynth) {
+              synth.triggerAttackRelease("C4", "16n", time);
+            }
+          } else {
+            (synth as Tone.Synth).triggerAttackRelease(note.note, "16n", time);
+          }
+        }
+      });
+
+      // Advances the step / beat
+      beatRef.current = (beatRef.current + 1) % 16;
+    },
+    [mode]
+  );
+
+  useEffect(() => {
+    if (scheduled.current) return;
+
+    scheduled.current = true;
+    const id = Tone.getTransport().scheduleRepeat(repeat, "16n");
+
+    return () => {
+      Tone.getTransport().clear(id);
+      scheduled.current = false;
+      console.log("[Audio] Clearing transport");
+    };
+  }, [repeat]);
+
+  const togglePlay = async () => {
+    if (isPlaying) {
+      Tone.getTransport().stop();
+      Tone.getTransport().position = 0;
+      setIsPlaying(false);
+    } else {
+      beatRef.current = 0;
+      setCurrentStep(0);
+      await Tone.start();
+      Tone.getTransport().start();
+      setIsPlaying(true);
+    }
+  };
+
+  return { isPlaying, currentStep, togglePlay };
+}
