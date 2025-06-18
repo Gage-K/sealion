@@ -20,6 +20,13 @@ export type Octave = Array<string>;
 
 export type Scale = Array<number>;
 
+export type Envelope = {
+  attack: number;
+  decay: number;
+  sustain: number;
+  release: number;
+};
+
 export type ModeName =
   | "ionian"
   | "dorian"
