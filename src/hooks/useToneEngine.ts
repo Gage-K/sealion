@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import * as Tone from "tone";
-import type { Sequence } from "../types/types";
+import type { Sequence, Envelope } from "../types/types";
 
 /**
  * Initializes Tone.js drum synthesizers and initial audio routing. Cleans up synthesizers on unmount
@@ -10,6 +10,34 @@ export function useToneEngine(mode: "synth" | "drum", sequence: Sequence) {
   const synthsRef = useRef<
     (Tone.Synth | Tone.MembraneSynth | Tone.NoiseSynth | Tone.MetalSynth)[]
   >([]);
+
+  const getInitADSR = useCallback(() => {
+    return sequence.map((_, index) => {
+      const synth = synthsRef.current[index];
+      if (synth?.envelope) {
+        return {
+          attack: Number(synth.envelope.attack),
+          decay: Number(synth.envelope.decay),
+          sustain: Number(synth.envelope.sustain),
+          release: Number(synth.envelope.release),
+        };
+      }
+
+      return { attack: 0.001, decay: 0.1, sustain: 0.5, release: 0.01 };
+    });
+  }, [sequence]);
+
+  const updateEnvelope = useCallback((trackIndex: number, env: Envelope) => {
+    const synth = synthsRef.current[trackIndex];
+    if (!synth) return;
+
+    if (synth.envelope) {
+      synth.envelope.attack = env.attack;
+      synth.envelope.decay = env.decay;
+      synth.envelope.sustain = env.sustain;
+      synth.envelope.release = env.release;
+    }
+  }, []);
 
   useEffect(() => {
     // TODO:
@@ -54,5 +82,5 @@ export function useToneEngine(mode: "synth" | "drum", sequence: Sequence) {
     }
   }, [mode]);
 
-  return synthsRef;
+  return { synthsRef, getInitADSR, updateEnvelope }; // return also the function that updateEnvelope(trackIndex, adsr)
 }
