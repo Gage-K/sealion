@@ -27,17 +27,10 @@ const DEFAULT_TRACK_SET: Sequence = [
   getTrackOfNote("C", 1, "hihat"),
 ];
 
-// style constants
-// const seqBtnStyles =
-//   "w-10 h-10 rounded-full bg-zinc-700 shadow-md shadow-black grid place-items-center text-neutral-50 inset-shadow-xs inset-shadow-zinc-500 active:bg-zinc-800 active:text-zinc-400 active:shadow-black/60 active:inset-shadow-zinc-500/50";
-// const seqBtnWrapperStyles =
-//   "step-container w-15 h-15 bg-zinc-700 grid place-items-center rounded-xs ";
-// const seqActive = `${seqBtnStyles} text-red-500`;
-
 function App() {
   const [bpm, setBPM] = useState<number>(120);
   const [sequence, setSequence] = useState(DEFAULT_TRACK_SET);
-  const [currentTrackIndex, setCurrenTrackIndex] = useState(0);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
 
   const { synthsRef, getInitADSR, updateEnvelope } = useToneEngine(
     CURRENT_MODE,
@@ -58,6 +51,7 @@ function App() {
 
   const [trackADSR, setTrackADSR] = useState<Envelope[]>(getInitADSR());
 
+  // TODO: move to custom hook
   Tone.getTransport().bpm.value = bpm;
 
   // TODO: add more checking to prevent numbers that break the BPM
@@ -83,8 +77,6 @@ function App() {
     sendUpdate(trackIndex, stepIndex);
   };
 
-  console.log(sequence[0]);
-
   // Updates the ADSR for the current track; ADSR is an array of objects; maps over each ADSR object and updates specified parameter with value
   const handleADSRChange = (parameter: keyof Envelope, value: number) => {
     setTrackADSR((prev) =>
@@ -101,11 +93,9 @@ function App() {
   return (
     <>
       <div className="px-16 grid place-items-center gap-4 mt-30">
-        {/* <button onClick={sendWSMessage}>Send a WS Message</button> */}
-
-        <div className="seq-container p-1 bg-zinc-900 rounded-sm flex shrink-1 border border-zinc-300 border-16 shadow-md">
-          <section className="display row-span-2 col-span-4 text-amber-600 bg-amber-950/20 rounded-sm m-1 border border-amber-600 p-2 flex text-md gap-1 grid grid-rows-1 grid-cols-2">
-            <div className="">
+        <div className="seq-container p-1 bg-zinc-900 rounded-sm flex shrink-1 border-16 border-zinc-300 shadow-md">
+          <section className="display row-span-2 col-span-4 text-amber-600 bg-amber-950/20 rounded-sm m-1 border border-amber-600 p-2 text-md gap-1 grid grid-rows-1 grid-cols-2">
+            <div className="display-info">
               <h1>SEALION-1000</h1>
               <ul>
                 <li>Vol: {volume} db</li>
@@ -163,7 +153,7 @@ function App() {
                 max={8}
                 step={0.01}
                 value={volume}
-                onChange={() => console.log("test")}
+                onChange={() => {}}
               />
             </div>
             <div className="grid grid-cols-4 items-center">
@@ -178,37 +168,13 @@ function App() {
                 max={50}
                 step={1}
                 value={volume}
-                onChange={() => console.log("test")}
+                onChange={() => {}}
               />
             </div>
           </form>
 
-          <section className="display row-span-2 col-span-4 text-amber-600 bg-amber-950/20 rounded-sm m-1 border border-amber-600 p-2 flex text-md gap-1 grid grid-rows-1 grid-cols-2">
-            <div className="flex-1 flex items-center justify-center">
-              <svg width="180" height="80" className="z-10">
-                <path
-                  d={(() => {
-                    const { attack, decay, sustain, release } =
-                      trackADSR[currentTrackIndex];
-                    const w = 160,
-                      h = 60;
-                    const totalTime = attack + decay + 0.5 + release;
-                    const aX = (attack / totalTime) * w;
-                    const dX = aX + (decay / totalTime) * w;
-                    const sX = dX + (0.5 / totalTime) * w;
-                    const rX = sX + (release / totalTime) * w;
-                    const sustainY = 10 + (1 - sustain) * 40;
-
-                    return `M 10 ${h} L ${10 + aX} 10 L ${
-                      10 + dX
-                    } ${sustainY} L ${10 + sX} ${sustainY} L ${10 + rX} ${h}`;
-                  })()}
-                  fill="none"
-                  stroke="#f59e0b"
-                  strokeWidth="2"
-                />
-              </svg>
-            </div>
+          <section className="display row-span-2 col-span-4 text-amber-600 bg-amber-950/20 rounded-sm m-1 border border-amber-600 p-2 text-md gap-1 grid grid-rows-1 grid-cols-2 display-info">
+            <h2>ADSR</h2>
             <ul>
               <li>Attack: {trackADSR[currentTrackIndex].attack}</li>
               <li>Decay: {trackADSR[currentTrackIndex].decay}</li>
@@ -308,12 +274,12 @@ function App() {
               span="col-span-2"
               primaryActive={index === currentTrackIndex}
               itemKey={index}
-              action={() => setCurrenTrackIndex(index)}></Button>
+              action={() => setCurrentTrackIndex(index)}></Button>
           ))}
 
           <Button
             text=""
-            action={() => console.log("test")}
+            action={() => {}}
             baseColor="yellow"
             ariaLabel="test"
             primaryActive={false}>
