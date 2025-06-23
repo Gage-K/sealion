@@ -79,6 +79,7 @@ export default function Button({
       disabled={disabled}
       className={clsx(
         "outer-button",
+        "inset-shadow-xs inset-shadow-zinc-100/75",
         "p-2 rounded-sm cursor-pointer duration-50 transition-ease-in-out",
         `grid ${span > 1 ? `col-span-${span}` : ""} place-items-center `,
         // Colors
@@ -98,7 +99,14 @@ export default function Button({
           styles["inner-button"],
           "w-full h-full rounded-full grid place-items-center"
         )}>
-        {text} {children}
+        <span
+          className={clsx(
+            styles["inner-button-inset"],
+            "w-full h-full rounded-full grid place-items-center"
+          )}>
+          {" "}
+          {text} {children}
+        </span>
       </span>
     </button>
   );
