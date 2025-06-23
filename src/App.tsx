@@ -1,6 +1,5 @@
 // import * as Tone from "tone";
 import { useState, useEffect } from "react";
-import * as Tone from "tone";
 import { ArrowsClockwise } from "phosphor-react";
 
 // lib
@@ -16,6 +15,7 @@ import { useMainVolume } from "./hooks/useMainVolume";
 import { useWebSocketSync } from "./hooks/useWebSocketSync";
 import { useTransport } from "./hooks/useTransport";
 import { useToneEngine } from "./hooks/useToneEngine";
+import { useBPM } from "./hooks/useBPM";
 
 import Button, {
   PlayButton,
@@ -32,7 +32,6 @@ const DEFAULT_TRACK_SET: Sequence = [
 ];
 
 function App() {
-  const [bpm, setBPM] = useState<number>(120);
   const [sequence, setSequence] = useState(DEFAULT_TRACK_SET);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
 
@@ -46,6 +45,7 @@ function App() {
     synthsRef,
     CURRENT_MODE
   );
+  const { bpm, handleBPMChange } = useBPM(120);
 
   const { sendUpdate } = useWebSocketSync({
     handleRemoteUpdate: (trackIndex, stepIndex) => {
@@ -54,19 +54,6 @@ function App() {
   });
 
   const [trackADSR, setTrackADSR] = useState<Envelope[]>(getInitADSR());
-
-  // TODO: move to custom hook
-  Tone.getTransport().bpm.value = bpm;
-
-  // TODO: add more checking to prevent numbers that break the BPM
-  const handleBPMChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.value) {
-      const newBPM = parseInt(e.target.value);
-      setBPM(newBPM);
-    } else {
-      setBPM(120);
-    }
-  };
 
   const handleMainVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const volume = parseFloat(e.target.value);
@@ -127,7 +114,7 @@ function App() {
                 max="240"
                 step={1}
                 value={bpm}
-                onChange={(e) => handleBPMChange(e)}
+                onChange={handleBPMChange}
               />
             </div>
             <div className="grid grid-cols-4 items-center">
