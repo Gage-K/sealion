@@ -40,7 +40,7 @@ function App() {
     CURRENT_MODE,
     sequence
   );
-  const { volume, setVolume } = useMainVolume(sequence);
+  const { volume, updateVolume } = useMainVolume(sequence);
   const { isPlaying, currentStep, togglePlay } = useTransport(
     sequence,
     synthsRef,
@@ -64,7 +64,7 @@ function App() {
   const handleMainVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const volume = parseFloat(e.target.value);
     if (!isNaN(volume)) {
-      setVolume(volume);
+      updateVolume(volume);
     }
   };
 
