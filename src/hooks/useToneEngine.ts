@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as Tone from "tone";
 import type { Sequence, Envelope } from "../types/types";
 
@@ -11,7 +11,9 @@ export function useToneEngine(mode: "synth" | "drum", sequence: Sequence) {
     (Tone.Synth | Tone.MembraneSynth | Tone.NoiseSynth | Tone.MetalSynth)[]
   >([]);
 
-  const getInitADSR = useCallback(() => {
+  const [synthsReady, setSynthsReady] = useState(false);
+
+  const getInitEnvelope = useCallback(() => {
     return sequence.map((_, index) => {
       const synth = synthsRef.current[index];
       if (synth?.envelope) {
@@ -25,28 +27,35 @@ export function useToneEngine(mode: "synth" | "drum", sequence: Sequence) {
 
       return { attack: 0.001, decay: 0.1, sustain: 0.5, release: 0.01 };
     });
-  }, [sequence]);
+  }, [sequence, synthsReady]);
 
-  const updateEnvelope = useCallback((trackIndex: number, env: Envelope) => {
-    const synth = synthsRef.current[trackIndex];
-    if (!synth) return;
+  const updateEnvelope = useCallback(
+    (trackIndex: number, envelope: Envelope) => {
+      const synth = synthsRef.current[trackIndex];
+      if (!synth?.envelope) {
+        console.warn(`No synth or envelope found for track ${trackIndex}`);
+        return;
+      }
 
-    if (synth.envelope) {
-      synth.envelope.attack = env.attack;
-      synth.envelope.decay = env.decay;
-      synth.envelope.sustain = env.sustain;
-      synth.envelope.release = env.release;
-    }
-  }, []);
+      console.log(`Updating envelope for track ${trackIndex}`);
+      synth.envelope.attack = envelope.attack;
+      synth.envelope.decay = envelope.decay;
+      synth.envelope.sustain = envelope.sustain;
+      synth.envelope.release = envelope.release;
+    },
+    []
+  );
 
   useEffect(() => {
-    // TODO:
-    // [ ] Improve abstraction of track output
-    // [ ] Create placeholder node to control channel routing & handling track volume
+    if (synthsRef.current.length > 0) {
+      return;
+    }
+
     if (mode === "drum") {
       const kick = new Tone.MembraneSynth({
         envelope: { attack: 0.001, decay: 0.2, sustain: 0.1, release: 0.05 },
       }).connect(sequence[0].node); // get sent straight to output
+
       const hihat = new Tone.MetalSynth({
         envelope: { attack: 0.001, decay: 0.1, release: 0.01 },
         harmonicity: 5.1,
@@ -61,26 +70,19 @@ export function useToneEngine(mode: "synth" | "drum", sequence: Sequence) {
       }).connect(sequence[2].node);
 
       synthsRef.current = [kick, snare, hihat];
+      setSynthsReady(true);
       console.log("[Audio Init] Drum synths created...");
 
       return () => {
         console.log("[Audio Init] Drum synth unmounted...");
         synthsRef.current.forEach((synth) => synth.dispose());
         synthsRef.current = [];
+        setSynthsReady(false);
       };
     } else {
       console.error("[Audio] Synth mode not set");
-      // const synths = sequence.map(() =>
-      //   new Tone.Synth().connect(volumeRef.current)
-      // );
-      // synthsRef.current = synths;
-
-      // return () => {
-      //   synthsRef.current = [];
-      //   synths.forEach((synth) => synth.dispose());
-      // };
     }
-  }, [mode]);
+  }, []);
 
-  return { synthsRef, getInitADSR, updateEnvelope }; // return also the function that updateEnvelope(trackIndex, adsr)
+  return { synthsRef, getInitEnvelope, updateEnvelope, synthsReady }; // return also the function that updateEnvelope(trackIndex, adsr)
 }
