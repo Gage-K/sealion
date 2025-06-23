@@ -1,9 +1,9 @@
 // import * as Tone from "tone";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ArrowsClockwise } from "phosphor-react";
 
 // lib
-import { type Sequence, type Envelope } from "./types/types";
+import type { Sequence } from "./types/types";
 import { getTrackOfNote } from "./utils/utils";
 import { updateStep } from "./utils/sequenceUtils";
 import { dotStyles } from "./lib/seqStyles";
@@ -16,6 +16,7 @@ import { useWebSocketSync } from "./hooks/useWebSocketSync";
 import { useTransport } from "./hooks/useTransport";
 import { useToneEngine } from "./hooks/useToneEngine";
 import { useBPM } from "./hooks/useBPM";
+import { useEnvelope } from "./hooks/useEnvelope";
 
 import Button, {
   PlayButton,
@@ -35,7 +36,7 @@ function App() {
   const [sequence, setSequence] = useState(DEFAULT_TRACK_SET);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
 
-  const { synthsRef, getInitADSR, updateEnvelope } = useToneEngine(
+  const { synthsRef, getInitEnvelope, updateEnvelope } = useToneEngine(
     CURRENT_MODE,
     sequence
   );
@@ -46,6 +47,11 @@ function App() {
     CURRENT_MODE
   );
   const { bpm, handleBPMChange } = useBPM(120);
+  const { handleADSRChange, currentTrackEnvelope } = useEnvelope({
+    getInitADSR: getInitEnvelope,
+    updateEnvelope: updateEnvelope,
+    currentTrackIndex: currentTrackIndex,
+  });
 
   const { sendUpdate } = useWebSocketSync({
     handleRemoteUpdate: (trackIndex, stepIndex) => {
@@ -53,7 +59,7 @@ function App() {
     },
   });
 
-  const [trackADSR, setTrackADSR] = useState<Envelope[]>(getInitADSR());
+  // const [trackADSR, setTrackADSR] = useState<Envelope[]>(getInitADSR());
 
   const handleMainVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const volume = parseFloat(e.target.value);
@@ -69,17 +75,17 @@ function App() {
   };
 
   // Updates the ADSR for the current track; ADSR is an array of objects; maps over each ADSR object and updates specified parameter with value
-  const handleADSRChange = (parameter: keyof Envelope, value: number) => {
-    setTrackADSR((prev) =>
-      prev.map((adsr, index) =>
-        index === currentTrackIndex ? { ...adsr, [parameter]: value } : adsr
-      )
-    );
-  };
+  // const handleADSRChange = (parameter: keyof Envelope, value: number) => {
+  //   setTrackADSR((prev) =>
+  //     prev.map((adsr, index) =>
+  //       index === currentTrackIndex ? { ...adsr, [parameter]: value } : adsr
+  //     )
+  //   );
+  // };
 
-  useEffect(() => {
-    updateEnvelope(currentTrackIndex, trackADSR[currentTrackIndex]);
-  }, [trackADSR, currentTrackIndex]);
+  // useEffect(() => {
+  //   updateEnvelope(currentTrackIndex, trackADSR[currentTrackIndex]);
+  // }, [trackADSR, currentTrackIndex]);
 
   return (
     <>
@@ -167,10 +173,10 @@ function App() {
           <section className="display row-span-2 col-span-4 text-amber-600 bg-amber-950/20 rounded-sm m-1 border border-amber-600 p-2 text-md gap-1 grid grid-rows-1 grid-cols-2 display-info">
             <h2>ADSR</h2>
             <ul>
-              <li>Attack: {trackADSR[currentTrackIndex].attack}</li>
-              <li>Decay: {trackADSR[currentTrackIndex].decay}</li>
-              <li>Sustain: {trackADSR[currentTrackIndex].sustain}</li>
-              <li>Release: {trackADSR[currentTrackIndex].release}</li>
+              <li>Attack: {currentTrackEnvelope.attack}</li>
+              <li>Decay: {currentTrackEnvelope.decay}</li>
+              <li>Sustain: {currentTrackEnvelope.sustain}</li>
+              <li>Release: {currentTrackEnvelope.release}</li>
             </ul>
           </section>
 
@@ -186,7 +192,7 @@ function App() {
                 min={0}
                 max={2}
                 step={0.01}
-                value={trackADSR[currentTrackIndex].attack}
+                value={currentTrackEnvelope.attack}
                 onChange={(e) =>
                   handleADSRChange("attack", parseFloat(e.target.value))
                 }
@@ -203,7 +209,7 @@ function App() {
                 min={0}
                 max={2}
                 step={0.01}
-                value={trackADSR[currentTrackIndex].decay}
+                value={currentTrackEnvelope.decay}
                 onChange={(e) =>
                   handleADSRChange("decay", parseFloat(e.target.value))
                 }
@@ -220,7 +226,7 @@ function App() {
                 min={0}
                 max={1}
                 step={0.01}
-                value={trackADSR[currentTrackIndex].sustain}
+                value={currentTrackEnvelope.sustain}
                 onChange={(e) =>
                   handleADSRChange("sustain", parseFloat(e.target.value))
                 }
@@ -237,7 +243,7 @@ function App() {
                 min={0}
                 max={2}
                 step={0.01}
-                value={trackADSR[currentTrackIndex].release}
+                value={currentTrackEnvelope.release}
                 onChange={(e) =>
                   handleADSRChange("release", parseFloat(e.target.value))
                 }
