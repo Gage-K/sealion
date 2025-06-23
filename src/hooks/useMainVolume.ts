@@ -8,7 +8,7 @@ import { type Sequence } from "../types/types";
  */
 export function useMainVolume(sequence: Sequence) {
   const volumeRef = useRef<Tone.Volume | null>(null);
-  const [volume, setVolumeState] = useState(0); // React state for re-renders
+  const [volume, setVolume] = useState(0); // React state for re-renders
 
   useEffect(() => {
     const volumeNode = new Tone.Volume({
@@ -32,13 +32,13 @@ export function useMainVolume(sequence: Sequence) {
     };
   }, [sequence]);
 
-  const setVolume = useCallback((value: number) => {
+  const updateVolume = useCallback((value: number) => {
     const clamped = Math.min(Math.max(value, -12), 8);
-    setVolumeState(clamped); // update React state
+    setVolume(clamped); // update React state
     if (volumeRef.current) {
       volumeRef.current.volume.value = clamped; // update Tone volume
     }
   }, []);
 
-  return { volume, setVolume };
+  return { volume, updateVolume };
 }
