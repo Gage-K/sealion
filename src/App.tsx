@@ -59,8 +59,6 @@ function App() {
     },
   });
 
-  // const [trackADSR, setTrackADSR] = useState<Envelope[]>(getInitADSR());
-
   const handleMainVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const volume = parseFloat(e.target.value);
     if (!isNaN(volume)) {
@@ -73,19 +71,6 @@ function App() {
     setSequence((prev) => updateStep(prev, trackIndex, stepIndex));
     sendUpdate(trackIndex, stepIndex);
   };
-
-  // Updates the ADSR for the current track; ADSR is an array of objects; maps over each ADSR object and updates specified parameter with value
-  // const handleADSRChange = (parameter: keyof Envelope, value: number) => {
-  //   setTrackADSR((prev) =>
-  //     prev.map((adsr, index) =>
-  //       index === currentTrackIndex ? { ...adsr, [parameter]: value } : adsr
-  //     )
-  //   );
-  // };
-
-  // useEffect(() => {
-  //   updateEnvelope(currentTrackIndex, trackADSR[currentTrackIndex]);
-  // }, [trackADSR, currentTrackIndex]);
 
   return (
     <>
