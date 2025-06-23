@@ -1,7 +1,7 @@
 // import * as Tone from "tone";
 import { useState, useEffect } from "react";
 import * as Tone from "tone";
-import { ArrowsClockwise, Pause, Play } from "phosphor-react";
+import { ArrowsClockwise } from "phosphor-react";
 
 // lib
 import { type Sequence, type Envelope } from "./types/types";
@@ -17,7 +17,11 @@ import { useWebSocketSync } from "./hooks/useWebSocketSync";
 import { useTransport } from "./hooks/useTransport";
 import { useToneEngine } from "./hooks/useToneEngine";
 
-import Button from "./components/Buttons/Button";
+import Button, {
+  PlayButton,
+  StepButton,
+  UtilityButton,
+} from "./components/UI/Button";
 
 // constants
 const CURRENT_MODE: "synth" | "drum" = "drum";
@@ -254,50 +258,31 @@ function App() {
             </div>
           </form>
 
-          <Button
-            text=""
-            ariaLabel={isPlaying ? "Pause playback" : "Start playback"}
-            primaryActive={false}
-            baseColor="yellow"
-            action={togglePlay}>
-            {isPlaying ? (
-              <Pause size={16} weight="fill" />
-            ) : (
-              <Play size={16} weight="fill" />
-            )}
-          </Button>
+          <PlayButton isPlaying={isPlaying} onToggle={togglePlay} />
           {sequence.map((_, index) => (
             <Button
               text={`T${index + 1}`}
               ariaLabel="Track"
               baseColor="yellow"
-              span="col-span-2"
-              primaryActive={index === currentTrackIndex}
-              itemKey={index}
-              action={() => setCurrentTrackIndex(index)}></Button>
+              span={2}
+              onClick={() => setCurrentTrackIndex(index)}></Button>
           ))}
-
-          <Button
-            text=""
-            action={() => {}}
+          <UtilityButton
+            icon={<ArrowsClockwise size={20} />}
+            label="Sync"
+            onClick={() => {}}
             baseColor="yellow"
-            ariaLabel="test"
-            primaryActive={false}>
-            <ArrowsClockwise size={20} />
-          </Button>
+          />
 
           {sequence[currentTrackIndex].steps.map((step, stepIndex) => (
-            <Button
-              action={() => handleSequenceChange(currentTrackIndex, stepIndex)}
-              text={stepIndex + 1}
-              baseColor={"zinc"}
-              primaryActive={step.active}
-              secondaryActive={currentStep === stepIndex}
-              itemKey={stepIndex}
-              tertiaryActive={step.active && stepIndex === currentStep}
-              ariaLabel={`Step ${
-                step.active ? "active" : "inactive"
-              }`}></Button>
+            <StepButton
+              stepNumber={stepIndex + 1}
+              isCurrent={currentStep === stepIndex}
+              isActive={step.active}
+              onToggle={() =>
+                handleSequenceChange(currentTrackIndex, stepIndex)
+              }
+            />
           ))}
         </div>
       </div>
