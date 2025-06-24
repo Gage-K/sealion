@@ -9,6 +9,11 @@ import { updateStep } from "./utils/sequenceUtils";
 import { dotStyles } from "./lib/seqStyles";
 
 // components
+import Button, {
+  PlayButton,
+  StepButton,
+  UtilityButton,
+} from "./components/UI/Button";
 
 // hooks
 import { useMainVolume } from "./hooks/useMainVolume";
@@ -17,12 +22,6 @@ import { useTransport } from "./hooks/useTransport";
 import { useToneEngine } from "./hooks/useToneEngine";
 import { useBPM } from "./hooks/useBPM";
 import { useEnvelope } from "./hooks/useEnvelope";
-
-import Button, {
-  PlayButton,
-  StepButton,
-  UtilityButton,
-} from "./components/UI/Button";
 
 // constants
 const CURRENT_MODE: "synth" | "drum" = "drum";
