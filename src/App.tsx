@@ -22,6 +22,7 @@ import { useTransport } from "./hooks/useTransport";
 import { useToneEngine } from "./hooks/useToneEngine";
 import { useBPM } from "./hooks/useBPM";
 import { useEnvelope } from "./hooks/useEnvelope";
+import { useCurrentTrack } from "./hooks/useCurrentTrack";
 
 // constants
 const CURRENT_MODE: "synth" | "drum" = "drum";
@@ -33,7 +34,7 @@ const DEFAULT_TRACK_SET: Sequence = [
 
 function App() {
   const [sequence, setSequence] = useState(DEFAULT_TRACK_SET);
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const { currentTrackIndex, updateCurrentTrackIndex } = useCurrentTrack();
 
   const { synthsRef, getInitEnvelope, updateEnvelope } = useToneEngine(
     CURRENT_MODE,
@@ -242,7 +243,7 @@ function App() {
               ariaLabel="Track"
               baseColor="yellow"
               span={2}
-              onClick={() => setCurrentTrackIndex(index)}></Button>
+              onClick={() => updateCurrentTrackIndex(index)}></Button>
           ))}
           <UtilityButton
             icon={<ArrowsClockwise size={20} />}
