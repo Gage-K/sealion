@@ -240,6 +240,7 @@ function App() {
           <PlayButton isPlaying={isPlaying} onToggle={togglePlay} />
           {sequence.map((_, index) => (
             <TrackButton
+              key={index}
               trackNumber={index + 1}
               isActive={currentTrackIndex === index}
               onSelect={() => updateCurrentTrackIndex(index)}
@@ -254,6 +255,7 @@ function App() {
 
           {sequence[currentTrackIndex].steps.map((step, stepIndex) => (
             <StepButton
+              key={stepIndex}
               stepNumber={stepIndex + 1}
               isCurrent={currentStep === stepIndex}
               isActive={step.active}
