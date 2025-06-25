@@ -35,25 +35,21 @@ const DEFAULT_TRACK_SET: Sequence = [
 
 function App() {
   const [sequence, setSequence] = useState(DEFAULT_TRACK_SET);
-  const { currentTrackIndex, updateCurrentTrackIndex } = useCurrentTrack();
 
+  const { currentTrackIndex, updateCurrentTrackIndex } = useCurrentTrack();
   const { synthsRef, getInitEnvelope, updateEnvelope } = useToneEngine(
     CURRENT_MODE,
     sequence
   );
   const { volume, updateVolume } = useMainVolume(sequence);
-  const { isPlaying, currentStep, togglePlay } = useTransport(
-    sequence,
-    synthsRef,
-    CURRENT_MODE
-  );
+  const { isPlaying, currentStep, togglePlay, swing, handleSwingChange } =
+    useTransport(sequence, synthsRef, CURRENT_MODE);
   const { bpm, handleBPMChange } = useBPM(120);
   const { handleADSRChange, currentTrackEnvelope } = useEnvelope({
     getInitADSR: getInitEnvelope,
     updateEnvelope: updateEnvelope,
     currentTrackIndex: currentTrackIndex,
   });
-
   const { sendUpdate } = useWebSocketSync({
     handleRemoteUpdate: (trackIndex, stepIndex) => {
       setSequence((prev) => updateStep(prev, trackIndex, stepIndex));
@@ -80,18 +76,18 @@ function App() {
           <section className="display row-span-2 col-span-4 text-amber-600 bg-amber-950/20 rounded-sm m-1 border border-amber-600 p-2 text-md gap-1 grid grid-rows-1 grid-cols-2">
             <div className="display-info">
               <h1>SEALION-1000</h1>
-              <ul>
-                <li>Vol: {volume} db</li>
-                <li>BPM: {bpm}</li>
-                <li>Step: {currentStep === null ? "0" : currentStep + 1}</li>
-              </ul>
-            </div>
-            <div>
               <h2>TRACK {currentTrackIndex + 1}</h2>
               <ul>
                 <li>Track Vol: 0 db</li>
               </ul>
             </div>
+            <ul>
+              <li>Vol: {volume} db</li>
+              <li>BPM: {bpm}</li>
+              <li>Step: {currentStep === null ? "0" : currentStep + 1}</li>
+              <li>Swing: {Math.floor(swing * 100)}%</li>
+            </ul>
+            <div></div>
           </section>
           <form className="rounded-sm inset-shadow-md col-start-5 col-span-4 row-span-2 bg-zinc-300 p-2 inset-shadow-zinc-50/75 inset-shadow-sm grid items-center">
             <div className="grid grid-cols-4 items-center">
@@ -132,14 +128,14 @@ function App() {
                 id="swing"
                 className={dotStyles.input}
                 type="range"
-                min={-12}
-                max={8}
+                min={0}
+                max={0.25}
                 step={0.01}
-                value={volume}
-                onChange={() => {}}
+                value={swing}
+                onChange={handleSwingChange}
               />
             </div>
-            <div className="grid grid-cols-4 items-center">
+            {/* <div className="grid grid-cols-4 items-center">
               <label htmlFor="pan" className={dotStyles.label}>
                 Pan
               </label>
@@ -153,7 +149,7 @@ function App() {
                 value={volume}
                 onChange={() => {}}
               />
-            </div>
+            </div> */}
           </form>
 
           <section className="display row-span-2 col-span-4 text-amber-600 bg-amber-950/20 rounded-sm m-1 border border-amber-600 p-2 text-md gap-1 grid grid-rows-1 grid-cols-2 display-info">

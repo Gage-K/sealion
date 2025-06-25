@@ -24,6 +24,7 @@ export function useTransport(
   // States
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState<number | null>(null);
+  const [swing, setSwing] = useState(0);
 
   // Refs
   const beatRef = useRef(0);
@@ -91,5 +92,20 @@ export function useTransport(
     }
   };
 
-  return { isPlaying, currentStep, togglePlay };
+  const handleSwingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const swingValue = parseFloat(e.target.value);
+    if (!isNaN(swingValue)) {
+      setSwing(swingValue);
+      // Apply swing to the transport
+      Tone.getTransport().swing = swingValue;
+    }
+  };
+
+  return {
+    isPlaying,
+    currentStep,
+    togglePlay,
+    swing,
+    handleSwingChange,
+  };
 }
