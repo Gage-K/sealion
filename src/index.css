@@ -51,3 +51,168 @@
   background: black;
   cursor: pointer;
 }
+
+/* a[href^="https://"] {
+  @apply text-red-500;
+} */
+
+/* .button-light {
+  .toggled {
+
+  }
+  &.toggled {
+    @apply border border-red-100
+  }
+}
+
+@layer components {
+  .button-light {
+    @apply border border-red-100;
+  }
+}
+
+{
+  base: string;
+  text: string;
+  active: string;
+  activeText: string;
+} */
+
+.inner-button-bottom-shadow {
+  /* Outer Bottom Shadow */
+  box-shadow: 0 40px 16px 0px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 25px 15px 0px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 10px 0px rgba(0, 0, 0, 0.09);
+  box-shadow: 0 3px 6px 0px rgba(0, 0, 0, 0.1);
+}
+
+.inner-button-top-shadow {
+  /* Outer Top Shadow */
+  box-shadow: 0 -40px 16px 0px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 -25px 15px 0px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 -10px 10px 0px rgba(255, 255, 255, 0.3);
+  box-shadow: 0 -3px 6px 0px rgba(255, 255, 255, 0.5);
+  border-top: 1px solid rgba(255, 255, 255, 0.35);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.seq-button {
+  @apply p-2 rounded-sm cursor-pointer duration-50 grid place-items-center bg-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed active:opacity-80 active:scale-95 font-medium;
+  box-shadow: inset 0 3px 10px 0px rgba(255, 255, 255, 0.3);
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  border-bottom: 1px solid transparent;
+  border-left: 1px solid transparent;
+  border-right: 1px solid transparent;
+
+  span {
+    @apply w-full h-full rounded-full grid place-items-center;
+  }
+
+  &.track-select-button {
+    @apply col-span-2;
+  }
+
+  &.button-light {
+    @apply bg-zinc-200 text-zinc-900;
+
+    &.button-neutral {
+      @apply text-zinc-900;
+    }
+
+    &.button-active {
+      @apply text-indigo-600;
+    }
+
+    &.button-on-playing {
+      @apply text-green-800;
+    }
+
+    &.button-off-playing {
+      @apply text-green-600;
+    }
+  }
+
+  &.button-orange {
+    @apply bg-orange-600/90;
+
+    &.button-neutral {
+      @apply text-zinc-900;
+    }
+
+    &.button-active {
+      @apply text-orange-50;
+    }
+
+    &.button-on-playing {
+      @apply text-green-800;
+    }
+
+    &.button-off-playing {
+      @apply text-green-200;
+    }
+  }
+
+  &.button-indigo {
+    @apply bg-indigo-200;
+
+    &.button-neutral {
+      @apply text-zinc-600/95;
+    }
+
+    &.button-active {
+      @apply text-indigo-800;
+    }
+
+    &.button-on-playing {
+      @apply text-green-700;
+    }
+
+    &.button-off-playing {
+      @apply text-green-700;
+    }
+  }
+
+  &.button-yellow {
+    @apply bg-yellow-400;
+
+    &.button-neutral {
+      @apply text-yellow-900;
+    }
+
+    &.button-active {
+      @apply text-red-500;
+    }
+
+    &.button-on-playing {
+      @apply text-green-800;
+    }
+
+    &.button-off-playing {
+      @apply text-green-600;
+    }
+  }
+
+  &.button-blue {
+    @apply bg-blue-700;
+
+    &.button-neutral {
+      @apply text-blue-700;
+    }
+
+    &.button-active {
+      @apply text-blue-100;
+    }
+
+    &.button-on-playing {
+      @apply text-green-800;
+    }
+
+    &.button-off-playing {
+      @apply text-green-200;
+    }
+  }
+}
+
+/*
+  define the button-neutral, button-play-on, button-play-off
+*/

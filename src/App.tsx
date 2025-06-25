@@ -9,9 +9,10 @@ import { updateStep } from "./utils/sequenceUtils";
 import { dotStyles } from "./lib/seqStyles";
 
 // components
-import Button, {
+import {
   PlayButton,
   StepButton,
+  TrackButton,
   UtilityButton,
 } from "./components/UI/Button";
 
@@ -238,18 +239,17 @@ function App() {
 
           <PlayButton isPlaying={isPlaying} onToggle={togglePlay} />
           {sequence.map((_, index) => (
-            <Button
-              text={`T${index + 1}`}
-              ariaLabel="Track"
-              baseColor="yellow"
-              span={2}
-              onClick={() => updateCurrentTrackIndex(index)}></Button>
+            <TrackButton
+              trackNumber={index + 1}
+              isActive={currentTrackIndex === index}
+              onSelect={() => updateCurrentTrackIndex(index)}
+            />
           ))}
           <UtilityButton
             icon={<ArrowsClockwise size={20} />}
             label="Sync"
             onClick={() => {}}
-            baseColor="yellow"
+            // baseColor="yellow"
           />
 
           {sequence[currentTrackIndex].steps.map((step, stepIndex) => (
