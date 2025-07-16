@@ -6,6 +6,9 @@ interface ButtonProps {
   onClick: () => void;
   ariaLabel: string;
   className?: string;
+  showIndicator?: boolean;
+  isCurrent?: boolean;
+  isActive?: boolean;
 }
 
 export default function Button({
@@ -14,7 +17,15 @@ export default function Button({
   onClick,
   ariaLabel,
   className,
+  showIndicator,
+  isCurrent,
+  isActive,
 }: ButtonProps) {
+  let indicatorClass = "button-indicator";
+  if (isActive && isCurrent) indicatorClass += " indicator-active-current";
+  else if (isActive) indicatorClass += " indicator-active";
+  else if (isCurrent) indicatorClass += " indicator-current";
+
   return (
     <button
       onClick={onClick}
@@ -22,8 +33,13 @@ export default function Button({
       className={`seq-button ${className}`}>
       <span className="inner-button-bottom-shadow">
         <span className="inner-button-top-shadow button-text">
-          {" "}
-          {text} {children}
+          <span className="">
+            {" "}
+            {text} {children}
+            {showIndicator && (
+              <span className={indicatorClass} aria-hidden="true" />
+            )}
+          </span>
         </span>
       </span>
     </button>
@@ -61,9 +77,11 @@ export const TrackButton = ({
     text={`T${trackNumber}`}
     onClick={onSelect}
     ariaLabel={`Track ${trackNumber}`}
-    className={`track-select-button button-indigo ${
-      isActive ? "button-active" : "button-neutral"
+    className={`track-select-button button-indigo "button-neutral"
     }`}
+    showIndicator
+    isCurrent={false}
+    isActive={isActive}
   />
 );
 
@@ -82,15 +100,10 @@ export const StepButton = ({
     text={String(stepNumber)}
     onClick={onToggle}
     ariaLabel={`Step ${stepNumber} ${isActive ? "Active" : "Inactive"}`}
-    className={`button-light ${
-      isActive && isCurrent
-        ? "button-on-playing"
-        : isActive && !isCurrent
-        ? "button-active"
-        : isCurrent && !isActive
-        ? "button-off-playing"
-        : "button-neutral"
-    }`}
+    className="button-light"
+    showIndicator
+    isCurrent={isCurrent}
+    isActive={isActive}
   />
 );
 
