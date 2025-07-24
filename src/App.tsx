@@ -69,6 +69,7 @@ function App() {
       setSequence((prev) => updateStep(prev, trackIndex, stepIndex));
     },
   });
+  console.table(drumSynthCRDT.getTrackSequence(0));
 
   const handleMainVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const volume = parseFloat(e.target.value);
@@ -299,17 +300,19 @@ function App() {
             // baseColor="yellow"
           />
 
-          {sequence[currentTrackIndex].steps.map((step, stepIndex) => (
-            <StepButton
-              key={stepIndex}
-              stepNumber={stepIndex + 1}
-              isCurrent={currentStep === stepIndex}
-              isActive={step.active}
-              onToggle={() =>
-                handleSequenceChange(currentTrackIndex, stepIndex)
-              }
-            />
-          ))}
+          {drumSynthCRDT
+            .getTrackSequence(currentTrackIndex)
+            .map((step, stepIndex) => (
+              <StepButton
+                key={stepIndex}
+                stepNumber={stepIndex + 1}
+                isCurrent={currentStep === stepIndex}
+                isActive={step[0]}
+                onToggle={() =>
+                  handleSequenceChange(currentTrackIndex, stepIndex)
+                }
+              />
+            ))}
         </div>
       </div>
     </>

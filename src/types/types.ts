@@ -1,6 +1,6 @@
 import * as Tone from "tone";
 
-import type { Step } from "./crdt";
+// import type { Step } from "./crdt";
 
 // export interface Step {
 //   note: string;
