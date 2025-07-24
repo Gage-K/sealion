@@ -3,6 +3,7 @@ import * as Tone from "tone";
 import { type Sequence } from "../types/types";
 /**
  * Updates the main volume for all audio output. Cleans up volume reference and routing on unmount.
+ * This volume is independent of the CRDT so that each client can set their own volume
  * @param sequence
  * @returns Volume value in decibels and a function to update volume state
  */

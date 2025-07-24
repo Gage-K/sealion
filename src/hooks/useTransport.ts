@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as Tone from "tone";
 import type { Sequence } from "../types/types";
+import { useCRDT } from "./useCRDT";
 
 /**
  * Initializes and handles the Tone.js clock for controlling playback, triggering audio, setting beat movement, and playing metronome
@@ -31,6 +32,9 @@ export function useTransport(
   const sequenceRef = useRef(sequence);
   const scheduled = useRef(false);
 
+  // Context
+  const drumSynthCRDT = useCRDT();
+
   useEffect(() => {
     sequenceRef.current = sequence;
   }, [sequence]);
@@ -41,9 +45,9 @@ export function useTransport(
 
     sequenceRef.current.forEach((track, index) => {
       const synth = synthsRef.current[index];
-      const note = track.steps[beatRef.current];
+      const note = drumSynthCRDT.getTrackSequence(index)[beatRef.current];
 
-      if (note.active) {
+      if (note[0]) {
         if (mode === "drum") {
           if (synth instanceof Tone.NoiseSynth) {
             synth.triggerAttackRelease("16n", time);
@@ -53,7 +57,7 @@ export function useTransport(
             synth.triggerAttackRelease("C4", "16n", time);
           }
         } else {
-          (synth as Tone.Synth).triggerAttackRelease(note.note, "16n", time);
+          // (synth as Tone.Synth).triggerAttackRelease(note[1], "16n", time);
         }
       }
     });
