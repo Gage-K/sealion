@@ -1,13 +1,15 @@
 import * as Tone from "tone";
 
-export interface Step {
-  note: string;
-  active: boolean;
-}
+import type { Step } from "./crdt";
+
+// export interface Step {
+//   note: string;
+//   active: boolean;
+// }
 
 export interface Track {
   name: string;
-  steps: Step[];
+  steps: boolean[];
   volume?: number;
   mute?: boolean;
   active?: boolean;
