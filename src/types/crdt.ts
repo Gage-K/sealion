@@ -122,25 +122,27 @@ class LWWMap<T> {
   }
 }
 
-type Step = [active: boolean];
+export type Step = [active: boolean];
 
-type Envelope = {
+export type Envelope = {
   attack: number;
   decay: number;
   sustain: number;
   release: number;
 };
-type TrackSettings = {
+export type TrackSettings = {
   envelope: Envelope;
   volume: number;
   muted: boolean;
 };
 
-type GlobalSettings = {
+export type GlobalSettings = {
   bpm: number;
   swing: number;
   pan: number;
 };
+
+type Listener = () => void;
 
 class GlobalSettingsCRDT {
   readonly id: string;
@@ -190,20 +192,36 @@ class GlobalSettingsCRDT {
   setBPM(bpm: number) {
     const current = this.value;
     this.setSettings({ ...current, bpm });
+    this.notify();
   }
 
   setSwing(swing: number) {
     const current = this.value;
     this.setSettings({ ...current, swing });
+    this.notify();
   }
 
   setPan(pan: number) {
     const current = this.value;
     this.setSettings({ ...current, pan });
+    this.notify();
   }
 
   merge(state: State<GlobalSettings>) {
     this.#data.merge(state);
+  }
+
+  private listeners: Listener[] = [];
+
+  subscribe(listener: Listener) {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter((l) => l !== listener);
+    };
+  }
+
+  private notify() {
+    this.listeners.forEach((l) => l());
   }
 }
 
@@ -260,20 +278,36 @@ class TrackSettingsCRDT {
   setEnvelope(envelope: Envelope) {
     const current = this.value;
     this.setSettings({ ...current, envelope });
+    this.notify();
   }
 
   setVolume(volume: number) {
     const current = this.value;
     this.setSettings({ ...current, volume });
+    this.notify();
   }
 
   setMuted(muted: boolean) {
     const current = this.value;
     this.setSettings({ ...current, muted });
+    this.notify();
   }
 
   merge(state: State<TrackSettings>) {
     this.#data.merge(state);
+  }
+
+  private listeners: Listener[] = [];
+
+  subscribe(listener: Listener) {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter((l) => l !== listener);
+    };
+  }
+
+  private notify() {
+    this.listeners.forEach((l) => l());
   }
 }
 
@@ -332,24 +366,40 @@ class SequencerCRDT {
   toggleStep(stepIndex: number) {
     const currentStep = this.getStep(stepIndex);
     this.setStep(stepIndex, [!currentStep[0]]);
+    this.notify();
   }
 
   clearStep(stepIndex: number) {
     this.setStep(stepIndex, [false]);
+    this.notify();
   }
 
   clearAllSteps() {
     for (let i = 0; i < 16; i++) {
       this.clearStep(i);
     }
+    this.notify();
   }
 
   merge(state: SequencerCRDT["state"]) {
     this.#data.merge(state);
   }
+
+  private listeners: Listener[] = [];
+
+  subscribe(listener: Listener) {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter((l) => l !== listener);
+    };
+  }
+
+  private notify() {
+    this.listeners.forEach((l) => l());
+  }
 }
 
-class DrumSynthCRDT {
+export class DrumSynthCRDT {
   readonly id: string;
   readonly globalSettings: GlobalSettingsCRDT;
   readonly tracks: [
@@ -447,42 +497,42 @@ class DrumSynthCRDT {
   }
 }
 
-const agentASequencer = new SequencerCRDT("agentA", 0, {});
+// const agentASequencer = new SequencerCRDT("agentA", 0, {});
 
-agentASequencer.setStep(0, [true]);
+// agentASequencer.setStep(0, [true]);
 
-agentASequencer.setStep(0, [false]);
+// agentASequencer.setStep(0, [false]);
 
-agentASequencer.setStep(10, [true]);
+// agentASequencer.setStep(10, [true]);
 
-const agentADrum = new DrumSynthCRDT("agentA", {});
+// const agentADrum = new DrumSynthCRDT("agentA", {});
 
-// console.log(agentADrum.state.tracks[0].sequence);
-agentADrum.getTrack(0).sequence.setStep(0, [true]);
-agentADrum.getTrack(0).sequence.setStep(0, [false]);
-agentADrum.getTrack(0).sequence.setStep(10, [true]);
-// console.log(agentADrum.state.tracks[0].sequence);
+// // console.log(agentADrum.state.tracks[0].sequence);
+// agentADrum.getTrack(0).sequence.setStep(0, [true]);
+// agentADrum.getTrack(0).sequence.setStep(0, [false]);
+// agentADrum.getTrack(0).sequence.setStep(10, [true]);
+// // console.log(agentADrum.state.tracks[0].sequence);
 
-const agentBDrum = new DrumSynthCRDT("agentB", {});
+// const agentBDrum = new DrumSynthCRDT("agentB", {});
+
+// // console.log(agentBDrum.state.tracks[0].sequence);
+// agentBDrum.getTrack(0).sequence.setStep(0, [true]);
+// agentBDrum.getTrack(0).sequence.setStep(0, [false]);
+// agentBDrum.getTrack(0).sequence.setStep(10, [true]);
+// // console.log(agentBDrum.state.tracks[0].sequence);
+
+// agentBDrum.merge(agentADrum.state);
 
 // console.log(agentBDrum.state.tracks[0].sequence);
-agentBDrum.getTrack(0).sequence.setStep(0, [true]);
-agentBDrum.getTrack(0).sequence.setStep(0, [false]);
-agentBDrum.getTrack(0).sequence.setStep(10, [true]);
-// console.log(agentBDrum.state.tracks[0].sequence);
 
-agentBDrum.merge(agentADrum.state);
+// console.log(
+//   JSON.stringify(agentBDrum.tracks[0].sequence.fullSequence, null, 2)
+// );
 
-console.log(agentBDrum.state.tracks[0].sequence);
+// agentADrum.tracks[0].sequence.setStep(0, [true]);
 
-console.log(
-  JSON.stringify(agentBDrum.tracks[0].sequence.fullSequence, null, 2)
-);
+// agentBDrum.merge(agentADrum.state);
 
-agentADrum.tracks[0].sequence.setStep(0, [true]);
-
-agentBDrum.merge(agentADrum.state);
-
-console.log(
-  JSON.stringify(agentBDrum.tracks[0].sequence.fullSequence, null, 2)
-);
+// console.log(
+//   JSON.stringify(agentBDrum.tracks[0].sequence.fullSequence, null, 2)
+// );
