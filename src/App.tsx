@@ -1,5 +1,5 @@
 // import * as Tone from "tone";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ArrowsClockwise } from "phosphor-react";
 
 // lib
@@ -24,6 +24,8 @@ import { useToneEngine } from "./hooks/useToneEngine";
 import { useBPM } from "./hooks/useBPM";
 import { useEnvelope } from "./hooks/useEnvelope";
 import { useCurrentTrack } from "./hooks/useCurrentTrack";
+import { useCRDT } from "./hooks/useCRDT";
+import { useSequence } from "./hooks/useSequence";
 
 // constants
 const CURRENT_MODE: "synth" | "drum" = "drum";
@@ -34,19 +36,31 @@ const DEFAULT_TRACK_SET: Sequence = [
 ];
 
 function App() {
+  const drumSynthCRDT = useCRDT();
+  // Defensive code guarding against multiple re-renders
+  const hasInit = useRef(false);
+  console.table(drumSynthCRDT.getTrackSequence(0));
+
   const [sequence, setSequence] = useState(DEFAULT_TRACK_SET);
 
+  console.log(sequence);
+
+  useEffect(() => {
+    if (hasInit.current) return;
+
+    hasInit.current = true;
+  }, [drumSynthCRDT]);
+
   const { currentTrackIndex, updateCurrentTrackIndex } = useCurrentTrack();
-  const { synthsRef, getInitEnvelope, updateEnvelope } = useToneEngine(
-    CURRENT_MODE,
-    sequence
-  );
+  const { handleSequenceChange } = useSequence({
+    currentTrackIndex: currentTrackIndex,
+  });
+  const { synthsRef, updateEnvelope } = useToneEngine(CURRENT_MODE, sequence);
   const { volume, updateVolume } = useMainVolume(sequence);
   const { isPlaying, currentStep, togglePlay, swing, handleSwingChange } =
     useTransport(sequence, synthsRef, CURRENT_MODE);
-  const { bpm, handleBPMChange } = useBPM(120);
-  const { handleADSRChange, currentTrackEnvelope } = useEnvelope({
-    getInitADSR: getInitEnvelope,
+  const { bpm, handleBPMChange } = useBPM();
+  const { handleADSRChange } = useEnvelope({
     updateEnvelope: updateEnvelope,
     currentTrackIndex: currentTrackIndex,
   });
@@ -64,10 +78,10 @@ function App() {
   };
 
   // Updates the sequence data for client and sends update operations to other subscribed clients in web socket
-  const handleSequenceChange = (trackIndex: number, stepIndex: number) => {
-    setSequence((prev) => updateStep(prev, trackIndex, stepIndex));
-    sendUpdate(trackIndex, stepIndex);
-  };
+  // const handleSequenceChange = (trackIndex: number, stepIndex: number) => {
+  //   setSequence((prev) => updateStep(prev, trackIndex, stepIndex));
+  //   sendUpdate(trackIndex, stepIndex);
+  // };
 
   return (
     <>
@@ -153,12 +167,36 @@ function App() {
           </form>
 
           <section className="display row-span-2 col-span-4 text-amber-600 bg-amber-950/20 rounded-sm m-1 border border-amber-600 p-2 text-md gap-1 grid grid-rows-1 grid-cols-2 display-info">
-            <h2>ADSR</h2>
+            <h2>ENVELOPE</h2>
             <ul>
-              <li>Attack: {currentTrackEnvelope.attack}</li>
-              <li>Decay: {currentTrackEnvelope.decay}</li>
-              <li>Sustain: {currentTrackEnvelope.sustain}</li>
-              <li>Release: {currentTrackEnvelope.release}</li>
+              <li>
+                Attack:{" "}
+                {
+                  drumSynthCRDT.tracks[currentTrackIndex].settings.envelope
+                    .attack
+                }
+              </li>
+              <li>
+                Decay:{" "}
+                {
+                  drumSynthCRDT.tracks[currentTrackIndex].settings.envelope
+                    .decay
+                }
+              </li>
+              <li>
+                Sustain:{" "}
+                {
+                  drumSynthCRDT.tracks[currentTrackIndex].settings.envelope
+                    .sustain
+                }
+              </li>
+              <li>
+                Release:{" "}
+                {
+                  drumSynthCRDT.tracks[currentTrackIndex].settings.envelope
+                    .release
+                }
+              </li>
             </ul>
           </section>
 
@@ -171,10 +209,13 @@ function App() {
                 id="attack"
                 className={dotStyles.input}
                 type="range"
-                min={0}
+                min={0.01}
                 max={2}
                 step={0.01}
-                value={currentTrackEnvelope.attack}
+                value={
+                  drumSynthCRDT.tracks[currentTrackIndex].settings.envelope
+                    .attack
+                }
                 onChange={(e) =>
                   handleADSRChange("attack", parseFloat(e.target.value))
                 }
@@ -188,10 +229,13 @@ function App() {
                 id="decay"
                 className={dotStyles.input}
                 type="range"
-                min={0}
+                min={0.01}
                 max={2}
                 step={0.01}
-                value={currentTrackEnvelope.decay}
+                value={
+                  drumSynthCRDT.tracks[currentTrackIndex].settings.envelope
+                    .decay
+                }
                 onChange={(e) =>
                   handleADSRChange("decay", parseFloat(e.target.value))
                 }
@@ -205,10 +249,13 @@ function App() {
                 id="sustain"
                 className={dotStyles.input}
                 type="range"
-                min={0}
+                min={0.01}
                 max={1}
                 step={0.01}
-                value={currentTrackEnvelope.sustain}
+                value={
+                  drumSynthCRDT.tracks[currentTrackIndex].settings.envelope
+                    .sustain
+                }
                 onChange={(e) =>
                   handleADSRChange("sustain", parseFloat(e.target.value))
                 }
@@ -222,10 +269,13 @@ function App() {
                 id="release"
                 className={dotStyles.input}
                 type="range"
-                min={0}
+                min={0.01}
                 max={2}
                 step={0.01}
-                value={currentTrackEnvelope.release}
+                value={
+                  drumSynthCRDT.tracks[currentTrackIndex].settings.envelope
+                    .release
+                }
                 onChange={(e) =>
                   handleADSRChange("release", parseFloat(e.target.value))
                 }
