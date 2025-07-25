@@ -5,7 +5,6 @@ import { ArrowsClockwise } from "phosphor-react";
 // lib
 import type { Sequence } from "./types/types";
 import { getTrackOfNote } from "./utils/utils";
-import { updateStep } from "./utils/sequenceUtils";
 import { dotStyles } from "./lib/seqStyles";
 
 // components
@@ -64,11 +63,11 @@ function App() {
     updateEnvelope: updateEnvelope,
     currentTrackIndex: currentTrackIndex,
   });
-  const { sendUpdate } = useWebSocketSync({
-    handleRemoteUpdate: (trackIndex, stepIndex) => {
-      setSequence((prev) => updateStep(prev, trackIndex, stepIndex));
-    },
-  });
+  // const { sendUpdate } = useWebSocketSync({
+  //   handleRemoteUpdate: (trackIndex, stepIndex) => {
+  //     setSequence((prev) => updateStep(prev, trackIndex, stepIndex));
+  //   },
+  // });
   console.table(drumSynthCRDT.getTrackSequence(0));
 
   const handleMainVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
