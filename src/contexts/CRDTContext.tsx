@@ -3,7 +3,10 @@ import { CRDTContext } from "../hooks/useCRDT";
 import { useMemo } from "react";
 
 export const CRDTProvider = ({ children }: { children: React.ReactNode }) => {
-  const drumSynthCRDT = useMemo(() => new DrumSynthCRDT("user1"), []);
+  const drumSynthCRDT = useMemo(
+    () => new DrumSynthCRDT(crypto.randomUUID()),
+    []
+  );
   return (
     <CRDTContext.Provider value={drumSynthCRDT}>
       {children}
