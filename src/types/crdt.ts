@@ -409,6 +409,9 @@ export class DrumSynthCRDT {
     { settings: TrackSettingsCRDT; sequence: SequencerCRDT }
   ];
 
+  private listeners: Listener[] = [];
+  private unsubscribeFunctions: (() => void)[] = [];
+
   constructor(
     id: string,
     state?: {
@@ -457,6 +460,44 @@ export class DrumSynthCRDT {
         sequence: new SequencerCRDT(id, 3, state?.tracks?.[3]?.sequence || {}),
       },
     ];
+
+    this.setupSubscriptions();
+  }
+
+  private setupSubscriptions() {
+    // Subscribe to global settings changes
+    this.unsubscribeFunctions.push(
+      this.globalSettings.subscribe(() => this.notify())
+    );
+
+    // Subscribe to each track's settings and sequence changes
+    this.tracks.forEach((track) => {
+      this.unsubscribeFunctions.push(
+        track.settings.subscribe(() => this.notify())
+      );
+      this.unsubscribeFunctions.push(
+        track.sequence.subscribe(() => this.notify())
+      );
+    });
+  }
+
+  // Subscription methods for external listeners (like WebSocket sync)
+  subscribe(listener: Listener) {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter((l) => l !== listener);
+    };
+  }
+
+  private notify() {
+    this.listeners.forEach((l) => l());
+  }
+
+  // Clean up subscriptions
+  destroy() {
+    this.unsubscribeFunctions.forEach((unsubscribe) => unsubscribe());
+    this.unsubscribeFunctions = [];
+    this.listeners = [];
   }
 
   get state() {
