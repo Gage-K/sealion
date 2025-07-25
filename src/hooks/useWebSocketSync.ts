@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import type { DrumSynthCRDT } from "../types/crdt";
 
 /**
  * Initializes Web Scoket connections between clients
@@ -8,13 +9,15 @@ import { useEffect, useRef } from "react";
  * @returns A function that receives a request to modify sequence and transfers to subscribed clients
  */
 export function useWebSocketSync({
-  handleRemoteUpdate,
+  getLocalState,
+  handleRemoteState,
 }: {
-  handleRemoteUpdate: (trackIndex: number, stepIndex: number) => void;
+  getLocalState: () => DrumSynthCRDT["state"];
+  handleRemoteState: (remoteCRDT: DrumSynthCRDT) => void;
 }) {
   const wsRef = useRef<WebSocket | null>(null);
-  const localClientId = useRef(crypto.randomUUID());
-  const lastUpdatedIdRef = useRef<string>("");
+  // const localClientId = useRef(crypto.randomUUID());
+  // const lastUpdatedIdRef = useRef<string>("");
 
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:8080"); // adjust port as needed
@@ -24,18 +27,9 @@ export function useWebSocketSync({
     ws.onerror = (err) => console.error("[WebSocket] Error:", err);
     ws.onmessage = (event) => {
       try {
-        const { trackIndex, stepIndex, clientId, updateId } = JSON.parse(
-          event.data
-        );
+        const remoteCRDT = JSON.parse(event.data);
 
-        if (
-          clientId === localClientId.current ||
-          lastUpdatedIdRef.current === updateId
-        ) {
-          return;
-        }
-        lastUpdatedIdRef.current = updateId;
-        handleRemoteUpdate(trackIndex, stepIndex);
+        handleRemoteState(remoteCRDT);
       } catch (err) {
         console.error("[WebSocket] Data retrieval failed:", err);
       }
@@ -51,14 +45,8 @@ export function useWebSocketSync({
     };
   }, []);
 
-  const sendUpdate = (trackIndex: number, stepIndex: number) => {
-    const update = {
-      trackIndex,
-      stepIndex,
-      clientId: localClientId.current,
-      updateId: crypto.randomUUID(),
-    };
-    wsRef.current?.send(JSON.stringify(update));
+  const sendUpdate = () => {
+    wsRef.current?.send(JSON.stringify(getLocalState()));
   };
 
   return { sendUpdate };
