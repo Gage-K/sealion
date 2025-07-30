@@ -1,4 +1,3 @@
-// import * as Tone from "tone";
 import { useState, useEffect, useRef } from "react";
 import { ArrowsClockwise } from "phosphor-react";
 
@@ -85,8 +84,8 @@ function App() {
 
   return (
     <>
-      <div className="px-16 grid place-items-center gap-4 mt-30">
-        <div className="seq-container p-1 bg-zinc-900 rounded-sm flex shrink-1 border-16 border-zinc-300 shadow-md">
+      <div className="px-16 grid place-items-center gap-4 mt-12">
+        <div className="seq-container p-1 bg-zinc-900 rounded-sm flex shrink-1 border-16 border-zinc-300 shadow-lg">
           <section className="display row-span-2 col-span-4 text-amber-600 bg-amber-950/20 rounded-sm m-1 border border-amber-600 p-2 text-md gap-1 grid grid-rows-1 grid-cols-2">
             <div className="display-info">
               <h1>SEALION-1000</h1>
