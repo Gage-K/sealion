@@ -527,6 +527,7 @@ export class DrumSynthCRDT {
   }
 
   merge(state: DrumSynthCRDT["state"]) {
+    console.log("STATE", state);
     this.globalSettings.merge(state.global);
 
     for (let i = 0; i < 4; i++) {

@@ -16,7 +16,6 @@ import {
 
 // hooks
 import { useMainVolume } from "./hooks/useMainVolume";
-import { useWebSocketSync } from "./hooks/useWebSocketSync";
 import { useTransport } from "./hooks/useTransport";
 import { useToneEngine } from "./hooks/useToneEngine";
 import { useBPM } from "./hooks/useBPM";
@@ -37,11 +36,8 @@ function App() {
   const drumSynthCRDT = useCRDT();
   // Defensive code guarding against multiple re-renders
   const hasInit = useRef(false);
-  console.table(drumSynthCRDT.getTrackSequence(0));
 
   const [sequence, setSequence] = useState(DEFAULT_TRACK_SET);
-
-  console.log(sequence);
 
   useEffect(() => {
     if (hasInit.current) return;
@@ -62,12 +58,6 @@ function App() {
     updateEnvelope: updateEnvelope,
     currentTrackIndex: currentTrackIndex,
   });
-  // const { sendUpdate } = useWebSocketSync({
-  //   handleRemoteUpdate: (trackIndex, stepIndex) => {
-  //     setSequence((prev) => updateStep(prev, trackIndex, stepIndex));
-  //   },
-  // });
-  console.table(drumSynthCRDT.getTrackSequence(0));
 
   const handleMainVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const volume = parseFloat(e.target.value);

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { DrumSynthCRDT } from "../types/crdt";
+import {useCRDT} from "./useCRDT.ts";
 
 /**
  * Initializes Web Scoket connections between clients
@@ -8,16 +9,11 @@ import type { DrumSynthCRDT } from "../types/crdt";
  * @param handleRemoteUpdate
  * @returns A function that receives a request to modify sequence and transfers to subscribed clients
  */
-export function useWebSocketSync({
-  getLocalState,
-  handleRemoteState,
-}: {
-  getLocalState: () => DrumSynthCRDT["state"];
-  handleRemoteState: (remoteCRDT: DrumSynthCRDT) => void;
-}) {
+export function useWebSocketSync() {
   const wsRef = useRef<WebSocket | null>(null);
   // const localClientId = useRef(crypto.randomUUID());
   // const lastUpdatedIdRef = useRef<string>("");
+  const drumSynthCRDT = useCRDT()
 
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:8080"); // adjust port as needed
@@ -27,9 +23,10 @@ export function useWebSocketSync({
     ws.onerror = (err) => console.error("[WebSocket] Error:", err);
     ws.onmessage = (event) => {
       try {
-        const remoteCRDT = JSON.parse(event.data);
-
-        handleRemoteState(remoteCRDT);
+        const remoteState: DrumSynthCRDT["state"] = JSON.parse(event.data);
+        console.log("received remoteState", remoteState);
+        drumSynthCRDT.merge(remoteState);
+        console.log("bpm expected", drumSynthCRDT.globalSettings.bpm)
       } catch (err) {
         console.error("[WebSocket] Data retrieval failed:", err);
       }
@@ -45,8 +42,9 @@ export function useWebSocketSync({
     };
   }, []);
 
-  const sendUpdate = () => {
-    wsRef.current?.send(JSON.stringify(getLocalState()));
+  const sendUpdate = (drumSynthCRDT: DrumSynthCRDT) => {
+    console.log("sending message")
+    wsRef.current?.send(JSON.stringify(drumSynthCRDT.state));
   };
 
   return { sendUpdate };
