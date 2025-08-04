@@ -1,20 +1,20 @@
 import * as Tone from "tone";
 
-export interface Step {
-  note: string;
-  active: boolean;
-}
+// import type { Step } from "./crdt";
 
-export interface Track {
+// export interface Step {
+//   note: string;
+//   active: boolean;
+// }
+
+export interface AudioTrack {
   name: string;
-  steps: Step[];
+  steps: boolean[];
   volume?: number;
   mute?: boolean;
   active?: boolean;
   node: Tone.ToneAudioNode;
 }
-
-export type Sequence = Track[];
 
 export type Octave = Array<string>;
 

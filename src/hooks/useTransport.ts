@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as Tone from "tone";
-import type { Sequence } from "../types/types";
+import type { Step } from "../types/crdt";
+import { useCRDT } from "./useCRDT";
+import type { AudioTrack } from "../types/types";
 
 /**
  * Initializes and handles the Tone.js clock for controlling playback, triggering audio, setting beat movement, and playing metronome
@@ -10,7 +12,7 @@ import type { Sequence } from "../types/types";
  * @returns Current step in the sequence, state of playback, and function to toggle playback
  */
 export function useTransport(
-  sequence: Sequence,
+  audioConfig: AudioTrack[],
   synthsRef: React.RefObject<
     (
       | Tone.MembraneSynth
@@ -19,31 +21,35 @@ export function useTransport(
       | Tone.Synth<Tone.SynthOptions>
     )[]
   >,
-  mode: "synth" | "drum"
+  mode: "synth" | "drum",
+  sequenceData: Step[][]
 ) {
   // States
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState<number | null>(null);
-  const [swing, setSwing] = useState(0);
 
   // Refs
   const beatRef = useRef(0);
-  const sequenceRef = useRef(sequence);
+  const sequenceRef = useRef(sequenceData);
   const scheduled = useRef(false);
+  const audioConfigRef = useRef(audioConfig);
+
+  // Context
+  const drumSynthCRDT = useCRDT();
 
   useEffect(() => {
-    sequenceRef.current = sequence;
-  }, [sequence]);
+    sequenceRef.current = sequenceData;
+  }, [sequenceData]);
 
   const repeat = useCallback((time: number) => {
     console.log("[Audio] Repeat started");
     setCurrentStep(beatRef.current);
 
-    sequenceRef.current.forEach((track, index) => {
+    audioConfigRef.current.forEach((_, index) => {
       const synth = synthsRef.current[index];
-      const note = track.steps[beatRef.current];
+      const note = drumSynthCRDT.getTrackSequence(index)[beatRef.current];
 
-      if (note.active) {
+      if (note[0]) {
         if (mode === "drum") {
           if (synth instanceof Tone.NoiseSynth) {
             synth.triggerAttackRelease("16n", time);
@@ -53,7 +59,7 @@ export function useTransport(
             synth.triggerAttackRelease("C4", "16n", time);
           }
         } else {
-          (synth as Tone.Synth).triggerAttackRelease(note.note, "16n", time);
+          // (synth as Tone.Synth).triggerAttackRelease(note[1], "16n", time);
         }
       }
     });
@@ -92,20 +98,9 @@ export function useTransport(
     }
   };
 
-  const handleSwingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const swingValue = parseFloat(e.target.value);
-    if (!isNaN(swingValue)) {
-      setSwing(swingValue);
-      // Apply swing to the transport
-      Tone.getTransport().swing = swingValue;
-    }
-  };
-
   return {
     isPlaying,
     currentStep,
     togglePlay,
-    swing,
-    handleSwingChange,
   };
 }

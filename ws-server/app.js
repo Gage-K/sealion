@@ -4,6 +4,7 @@ import { WebSocketServer } from "ws";
 const server = createServer();
 const wss = new WebSocketServer({ server });
 
+// TODO: add ready state validation
 wss.on("connection", (ws) => {
   console.log("[Server] Client connected");
   ws.on("message", (message) => {

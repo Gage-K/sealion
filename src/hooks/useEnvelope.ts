@@ -1,44 +1,64 @@
 import { useState, useEffect } from "react";
 import { type Envelope } from "../types/types";
+import { useCRDT } from "./useCRDT";
+import { DrumSynthCRDT } from "../types/crdt";
+import { useWebSocketSync } from "./useWebSocketSync";
 
 interface UseEnvelopeProps {
-  getInitADSR: () => Envelope[];
   updateEnvelope: (trackIndex: number, envelope: Envelope) => void;
   currentTrackIndex: number;
 }
 
 interface UseEnvelopeReturn {
-  trackADSR: Envelope[];
   handleADSRChange: (parameter: keyof Envelope, value: number) => void;
-  currentTrackEnvelope: Envelope;
 }
 
 export const useEnvelope = ({
-  getInitADSR,
   updateEnvelope,
   currentTrackIndex,
 }: UseEnvelopeProps): UseEnvelopeReturn => {
-  const [trackADSR, setTrackADSR] = useState<Envelope[]>(getInitADSR());
+  const drumSynthCRDT: DrumSynthCRDT = useCRDT();
+  const { sendUpdate } = useWebSocketSync();
+  const [trackADSR, setTrackADSR] = useState<Envelope[]>(
+    drumSynthCRDT.tracks.map((track) => track.settings.envelope)
+  );
+
+  useEffect(() => {
+    // Subscribe to ALL tracks' settings changes
+    const unsubscribeFunctions = drumSynthCRDT.tracks.map((track) =>
+      track.settings.subscribe(() => {
+        setTrackADSR(
+          drumSynthCRDT.tracks.map((track) => track.settings.envelope)
+        );
+      })
+    );
+
+    return () => {
+      unsubscribeFunctions.forEach((unsubscribe) => unsubscribe());
+    };
+  }, [drumSynthCRDT]); // Remove currentTrackIndex from dependencies
 
   // Updates the ADSR for the current track; ADSR is an array of objects; maps over each ADSR object and updates specified parameter with value
   const handleADSRChange = (parameter: keyof Envelope, value: number) => {
-    setTrackADSR((prev) =>
-      prev.map((adsr, index) =>
-        index === currentTrackIndex ? { ...adsr, [parameter]: value } : adsr
-      )
-    );
+    const newADSR = {
+      ...drumSynthCRDT.tracks[currentTrackIndex].settings.envelope,
+      [parameter]: value,
+    };
+    drumSynthCRDT.tracks[currentTrackIndex].settings.setEnvelope(newADSR);
+    sendUpdate(drumSynthCRDT);
   };
 
   // Update the tone engine when envelope changes
   useEffect(() => {
-    if (trackADSR[currentTrackIndex]) {
-      updateEnvelope(currentTrackIndex, trackADSR[currentTrackIndex]);
-    }
-  }, [trackADSR, currentTrackIndex, updateEnvelope]);
+    console.log(`track envelope changed`, trackADSR);
+    trackADSR.forEach((envelope, index) => {
+      if (envelope) {
+        updateEnvelope(index, envelope);
+      }
+    });
+  }, [trackADSR, updateEnvelope]);
 
   return {
-    trackADSR,
     handleADSRChange,
-    currentTrackEnvelope: trackADSR[currentTrackIndex],
   };
 };

@@ -97,7 +97,7 @@
 }
 
 .button-indicator {
-  @apply max-w-2 max-h-2 rounded-full bg-zinc-400 -translate-y-1/2;
+  @apply max-w-1.5 max-h-1.5 rounded-full bg-zinc-400 -translate-y-1/2;
 
   &.indicator-active-current {
     @apply bg-orange-500/90 ring ring-orange-300/50;
