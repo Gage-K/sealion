@@ -32,6 +32,7 @@ export function useTransport(
   const beatRef = useRef(0);
   const sequenceRef = useRef(sequenceData);
   const scheduled = useRef(false);
+  const audioConfigRef = useRef(audioConfig);
 
   // Context
   const drumSynthCRDT = useCRDT();
@@ -44,7 +45,7 @@ export function useTransport(
     console.log("[Audio] Repeat started");
     setCurrentStep(beatRef.current);
 
-    sequenceRef.current.forEach((_, index) => {
+    audioConfigRef.current.forEach((_, index) => {
       const synth = synthsRef.current[index];
       const note = drumSynthCRDT.getTrackSequence(index)[beatRef.current];
 

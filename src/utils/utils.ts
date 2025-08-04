@@ -2,8 +2,7 @@ import * as Tone from "tone";
 
 import {
   type Octave,
-  type Track,
-  type Sequence,
+  type AudioTrack,
   type Scale,
   type ModeName,
 } from "../types/types";
@@ -63,18 +62,11 @@ export const getOctave = (octPosition: number): Octave => {
 };
 
 // Returns a complete Track array for a given note of a given octave
-export const getTrackOfNote = (
-  note: string,
-  octave: number,
-  trackName: string
-) => {
+export const getTrackOfNote = (trackName: string) => {
   // returns a track with steps of specified note
-  const track: Track = {
+  const track: AudioTrack = {
     name: trackName,
-    steps: Array.from({ length: 16 }, () => ({
-      note: `${note}${octave}`,
-      active: false,
-    })),
+    steps: Array.from({ length: 16 }, () => false),
     volume: 0, // in deciabls
     mute: false,
     active: true,
@@ -85,9 +77,9 @@ export const getTrackOfNote = (
 };
 
 // Returns a complete sequence for each note of the chromatic scale
-export const getOctaveOfTracks = (rootOctave: number) => {
-  const sequence: Sequence = NOTES.map((note: string) =>
-    getTrackOfNote(note, rootOctave, note)
+export const getOctaveOfTracks = () => {
+  const sequence: AudioTrack[] = NOTES.map((note: string) =>
+    getTrackOfNote(note)
   );
   return sequence;
 };
@@ -98,18 +90,14 @@ export const transposeScale = (scale: Scale, rootNote: number): Scale => {
 };
 
 // Returns a complete sequence of a given note, octave, and scale
-export const getTracksByScale = (
-  rootNote: string,
-  rootOctave: number,
-  scaleName: ModeName
-) => {
+export const getTracksByScale = (rootNote: string, scaleName: ModeName) => {
   const scale: Scale = MODES[scaleName];
   const noteIndex = NOTES.indexOf(rootNote);
   const transposedScale = transposeScale(scale, noteIndex);
 
-  const sequence: Sequence = transposedScale.map((chromaticNoteIndex) => {
+  const sequence: AudioTrack[] = transposedScale.map((chromaticNoteIndex) => {
     const noteName = NOTES[chromaticNoteIndex];
-    return getTrackOfNote(noteName, rootOctave, noteName);
+    return getTrackOfNote(noteName);
   });
 
   return sequence;
