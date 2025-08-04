@@ -24,15 +24,19 @@ export const useEnvelope = ({
   );
 
   useEffect(() => {
-    const unsubscribe = drumSynthCRDT.tracks[
-      currentTrackIndex
-    ].settings.subscribe(() => {
-      setTrackADSR(
-        drumSynthCRDT.tracks.map((track) => track.settings.envelope)
-      );
-    });
-    return unsubscribe;
-  }, [drumSynthCRDT, currentTrackIndex]);
+    // Subscribe to ALL tracks' settings changes
+    const unsubscribeFunctions = drumSynthCRDT.tracks.map((track) =>
+      track.settings.subscribe(() => {
+        setTrackADSR(
+          drumSynthCRDT.tracks.map((track) => track.settings.envelope)
+        );
+      })
+    );
+
+    return () => {
+      unsubscribeFunctions.forEach((unsubscribe) => unsubscribe());
+    };
+  }, [drumSynthCRDT]); // Remove currentTrackIndex from dependencies
 
   // Updates the ADSR for the current track; ADSR is an array of objects; maps over each ADSR object and updates specified parameter with value
   const handleADSRChange = (parameter: keyof Envelope, value: number) => {
@@ -46,10 +50,13 @@ export const useEnvelope = ({
 
   // Update the tone engine when envelope changes
   useEffect(() => {
-    if (trackADSR[currentTrackIndex]) {
-      updateEnvelope(currentTrackIndex, trackADSR[currentTrackIndex]);
-    }
-  }, [trackADSR, currentTrackIndex, updateEnvelope]);
+    console.log(`track envelope changed`, trackADSR);
+    trackADSR.forEach((envelope, index) => {
+      if (envelope) {
+        updateEnvelope(index, envelope);
+      }
+    });
+  }, [trackADSR, updateEnvelope]);
 
   return {
     handleADSRChange,
