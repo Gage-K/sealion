@@ -23,6 +23,7 @@ import { useEnvelope } from "./hooks/useEnvelope";
 import { useCurrentTrack } from "./hooks/useCurrentTrack";
 import { useCRDT } from "./hooks/useCRDT";
 import { useSequence } from "./hooks/useSequence";
+import { useSwing } from "./hooks/useSwing";
 
 // constants
 const CURRENT_MODE: "synth" | "drum" = "drum";
@@ -51,8 +52,12 @@ function App() {
   });
   const { synthsRef, updateEnvelope } = useToneEngine(CURRENT_MODE, sequence);
   const { volume, updateVolume } = useMainVolume(sequence);
-  const { isPlaying, currentStep, togglePlay, swing, handleSwingChange } =
-    useTransport(sequence, synthsRef, CURRENT_MODE);
+  const { isPlaying, currentStep, togglePlay } = useTransport(
+    sequence,
+    synthsRef,
+    CURRENT_MODE
+  );
+  const { swing, handleSwingChange } = useSwing();
   const { bpm, handleBPMChange } = useBPM();
   const { handleADSRChange } = useEnvelope({
     updateEnvelope: updateEnvelope,
@@ -65,12 +70,6 @@ function App() {
       updateVolume(volume);
     }
   };
-
-  // Updates the sequence data for client and sends update operations to other subscribed clients in web socket
-  // const handleSequenceChange = (trackIndex: number, stepIndex: number) => {
-  //   setSequence((prev) => updateStep(prev, trackIndex, stepIndex));
-  //   sendUpdate(trackIndex, stepIndex);
-  // };
 
   return (
     <>
