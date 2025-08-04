@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { ArrowsClockwise } from "phosphor-react";
 
 // lib
-import type { Sequence } from "./types/types";
+import type { AudioTrack } from "./types/types";
+import type { Step } from "./types/crdt";
 import { getTrackOfNote } from "./utils/utils";
 import { dotStyles } from "./lib/seqStyles";
 
@@ -27,7 +28,7 @@ import { useSwing } from "./hooks/useSwing";
 
 // constants
 const CURRENT_MODE: "synth" | "drum" = "drum";
-const DEFAULT_TRACK_SET: Sequence = [
+const AUDIO_CONFIG: AudioTrack[] = [
   getTrackOfNote("C", 1, "kick"),
   getTrackOfNote("C", 4, "snare"),
   getTrackOfNote("C", 1, "hihat"),
@@ -38,7 +39,9 @@ function App() {
   // Defensive code guarding against multiple re-renders
   const hasInit = useRef(false);
 
-  const [sequence, setSequence] = useState(DEFAULT_TRACK_SET);
+  const sequenceData: Step[][] = useMemo(() => {
+    return drumSynthCRDT.getAllTrackSequences();
+  }, [drumSynthCRDT]);
 
   useEffect(() => {
     if (hasInit.current) return;
@@ -50,12 +53,16 @@ function App() {
   const { handleSequenceChange } = useSequence({
     currentTrackIndex: currentTrackIndex,
   });
-  const { synthsRef, updateEnvelope } = useToneEngine(CURRENT_MODE, sequence);
-  const { volume, updateVolume } = useMainVolume(sequence);
+  const { synthsRef, updateEnvelope } = useToneEngine(
+    CURRENT_MODE,
+    AUDIO_CONFIG
+  );
+  const { volume, updateVolume } = useMainVolume(AUDIO_CONFIG);
   const { isPlaying, currentStep, togglePlay } = useTransport(
-    sequence,
+    AUDIO_CONFIG,
     synthsRef,
-    CURRENT_MODE
+    CURRENT_MODE,
+    sequenceData
   );
   const { swing, handleSwingChange } = useSwing();
   const { bpm, handleBPMChange } = useBPM();
@@ -272,7 +279,7 @@ function App() {
           </form>
 
           <PlayButton isPlaying={isPlaying} onToggle={togglePlay} />
-          {sequence.map((_, index) => (
+          {AUDIO_CONFIG.map((_, index) => (
             <TrackButton
               key={index}
               trackNumber={index + 1}

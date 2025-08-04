@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as Tone from "tone";
-import type { Sequence, Envelope } from "../types/types";
+import type { AudioTrack, Envelope } from "../types/types";
 
 /**
  * Initializes Tone.js drum synthesizers and initial audio routing. Cleans up synthesizers on unmount
  * @returns A Ref containing an array of the drum synthesizers
  */
-export function useToneEngine(mode: "synth" | "drum", sequence: Sequence) {
+export function useToneEngine(
+  mode: "synth" | "drum",
+  audioConfig: AudioTrack[]
+) {
   const synthsRef = useRef<
     (Tone.Synth | Tone.MembraneSynth | Tone.NoiseSynth | Tone.MetalSynth)[]
   >([]);
@@ -14,7 +17,7 @@ export function useToneEngine(mode: "synth" | "drum", sequence: Sequence) {
   const [synthsReady, setSynthsReady] = useState(false);
 
   const getInitEnvelope = useCallback(() => {
-    return sequence.map((_, index) => {
+    return audioConfig.map((_, index) => {
       const synth = synthsRef.current[index];
       if (synth?.envelope) {
         return {
@@ -27,7 +30,7 @@ export function useToneEngine(mode: "synth" | "drum", sequence: Sequence) {
 
       return { attack: 0.001, decay: 0.1, sustain: 0.5, release: 0.01 };
     });
-  }, [sequence, synthsReady]);
+  }, [audioConfig, synthsReady]);
 
   const updateEnvelope = useCallback(
     (trackIndex: number, envelope: Envelope) => {
@@ -54,7 +57,7 @@ export function useToneEngine(mode: "synth" | "drum", sequence: Sequence) {
     if (mode === "drum") {
       const kick = new Tone.MembraneSynth({
         envelope: { attack: 0.001, decay: 0.2, sustain: 0.1, release: 0.05 },
-      }).connect(sequence[0].node); // get sent straight to output
+      }).connect(audioConfig[0].node); // get sent straight to output
 
       const hihat = new Tone.MetalSynth({
         envelope: { attack: 0.001, decay: 0.1, release: 0.01 },
@@ -62,12 +65,12 @@ export function useToneEngine(mode: "synth" | "drum", sequence: Sequence) {
         modulationIndex: 32,
         resonance: 4000,
         octaves: 1.5,
-      }).connect(sequence[1].node);
+      }).connect(audioConfig[1].node);
 
       const snare = new Tone.NoiseSynth({
         noise: { type: "white" },
         envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.05 },
-      }).connect(sequence[2].node);
+      }).connect(audioConfig[2].node);
 
       synthsRef.current = [kick, snare, hihat];
       setSynthsReady(true);

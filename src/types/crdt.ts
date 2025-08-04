@@ -525,6 +525,12 @@ export class DrumSynthCRDT {
     return this.getTrack(trackIndex).sequence.sequence;
   }
 
+  getAllTrackSequences() {
+    return this.tracks.map((_, trackIndex) =>
+      this.getTrackSequence(trackIndex)
+    );
+  }
+
   getTrackSettings(trackIndex: number): TrackSettings {
     return this.getTrack(trackIndex).settings.value;
   }

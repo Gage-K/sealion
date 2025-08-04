@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as Tone from "tone";
-import { type Sequence } from "../types/types";
+import type { AudioTrack } from "../types/types";
 /**
  * Updates the main volume for all audio output. Cleans up volume reference and routing on unmount.
  * This volume is independent of the CRDT so that each client can set their own volume
  * @param sequence
  * @returns Volume value in decibels and a function to update volume state
  */
-export function useMainVolume(sequence: Sequence) {
+export function useMainVolume(audioConfig: AudioTrack[]) {
   const volumeRef = useRef<Tone.Volume | null>(null);
   const [volume, setVolume] = useState(0); // React state for re-renders
 
@@ -33,12 +33,12 @@ export function useMainVolume(sequence: Sequence) {
   useEffect(() => {
     if (!volumeRef.current) return;
 
-    sequence.forEach((track) => {
+    audioConfig.forEach((track) => {
       track.node.connect(volumeRef.current!);
     });
 
     return () => {
-      sequence.forEach((track) => {
+      audioConfig.forEach((track) => {
         try {
           track.node.disconnect(volumeRef.current!);
         } catch (error) {
@@ -46,7 +46,7 @@ export function useMainVolume(sequence: Sequence) {
         }
       });
     };
-  }, [sequence]);
+  }, [audioConfig]);
 
   const updateVolume = useCallback((value: number) => {
     const clamped = Math.min(Math.max(value, -12), 8);

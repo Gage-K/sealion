@@ -7,7 +7,7 @@ import * as Tone from "tone";
 //   active: boolean;
 // }
 
-export interface Track {
+export interface AudioTrack {
   name: string;
   steps: boolean[];
   volume?: number;
@@ -15,8 +15,6 @@ export interface Track {
   active?: boolean;
   node: Tone.ToneAudioNode;
 }
-
-export type Sequence = Track[];
 
 export type Octave = Array<string>;
 
