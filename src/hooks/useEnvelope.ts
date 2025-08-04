@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { type Envelope } from "../types/types";
 import { useCRDT } from "./useCRDT";
 import { DrumSynthCRDT } from "../types/crdt";
+import { useWebSocketSync } from "./useWebSocketSync";
 
 interface UseEnvelopeProps {
   updateEnvelope: (trackIndex: number, envelope: Envelope) => void;
@@ -17,6 +18,7 @@ export const useEnvelope = ({
   currentTrackIndex,
 }: UseEnvelopeProps): UseEnvelopeReturn => {
   const drumSynthCRDT: DrumSynthCRDT = useCRDT();
+  const { sendUpdate } = useWebSocketSync();
   const [trackADSR, setTrackADSR] = useState<Envelope[]>(
     drumSynthCRDT.tracks.map((track) => track.settings.envelope)
   );
@@ -39,6 +41,7 @@ export const useEnvelope = ({
       [parameter]: value,
     };
     drumSynthCRDT.tracks[currentTrackIndex].settings.setEnvelope(newADSR);
+    sendUpdate(drumSynthCRDT);
   };
 
   // Update the tone engine when envelope changes
