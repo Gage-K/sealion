@@ -209,6 +209,7 @@ class GlobalSettingsCRDT {
 
   merge(state: State<GlobalSettings>) {
     this.#data.merge(state);
+    this.notify();
   }
 
   private listeners: Listener[] = [];
@@ -295,6 +296,7 @@ class TrackSettingsCRDT {
 
   merge(state: State<TrackSettings>) {
     this.#data.merge(state);
+    this.notify();
   }
 
   private listeners: Listener[] = [];
@@ -383,6 +385,7 @@ class SequencerCRDT {
 
   merge(state: SequencerCRDT["state"]) {
     this.#data.merge(state);
+    this.notify();
   }
 
   private listeners: Listener[] = [];
@@ -527,7 +530,6 @@ export class DrumSynthCRDT {
   }
 
   merge(state: DrumSynthCRDT["state"]) {
-    console.log("STATE", state);
     this.globalSettings.merge(state.global);
 
     for (let i = 0; i < 4; i++) {
@@ -536,6 +538,8 @@ export class DrumSynthCRDT {
         this.tracks[i].sequence.merge(state.tracks[i].sequence);
       }
     }
+
+    this.notify();
   }
 }
 
