@@ -16,7 +16,9 @@ export function useWebSocketSync() {
   const drumSynthCRDT = useCRDT();
 
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:8080"); // adjust port as needed
+    const ws = new WebSocket(
+      import.meta.env.VITE_WS_URL || "ws://localhost:8080"
+    ); // adjust port as needed
     wsRef.current = ws;
 
     ws.onopen = () => console.log("[WebSocket] Connected");
