@@ -232,3 +232,12 @@
 /*
   define the button-neutral, button-play-on, button-play-off
 */
+
+.text-container {
+  font-family: "VT323", monospace;
+  font-weight: 400;
+  font-style: normal;
+  font-size: 1.25rem;
+  line-height: 1;
+  @apply text-amber-600;
+}
