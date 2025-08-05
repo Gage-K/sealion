@@ -125,7 +125,7 @@
   }
 
   &.track-select-button {
-    @apply col-span-2;
+    @apply col-span-1;
   }
 
   &.button-light {

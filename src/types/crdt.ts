@@ -409,6 +409,8 @@ export class DrumSynthCRDT {
     { settings: TrackSettingsCRDT; sequence: SequencerCRDT },
     { settings: TrackSettingsCRDT; sequence: SequencerCRDT },
     { settings: TrackSettingsCRDT; sequence: SequencerCRDT },
+    { settings: TrackSettingsCRDT; sequence: SequencerCRDT },
+    { settings: TrackSettingsCRDT; sequence: SequencerCRDT },
     { settings: TrackSettingsCRDT; sequence: SequencerCRDT }
   ];
 
@@ -461,6 +463,22 @@ export class DrumSynthCRDT {
           state?.tracks?.[3]?.settings || {}
         ),
         sequence: new SequencerCRDT(id, 3, state?.tracks?.[3]?.sequence || {}),
+      },
+      {
+        settings: new TrackSettingsCRDT(
+          id,
+          4,
+          state?.tracks?.[4]?.settings || {}
+        ),
+        sequence: new SequencerCRDT(id, 4, state?.tracks?.[4]?.sequence || {}),
+      },
+      {
+        settings: new TrackSettingsCRDT(
+          id,
+          5,
+          state?.tracks?.[5]?.settings || {}
+        ),
+        sequence: new SequencerCRDT(id, 5, state?.tracks?.[5]?.sequence || {}),
       },
     ];
 
@@ -515,8 +533,8 @@ export class DrumSynthCRDT {
 
   // Convenience methods for common operations
   getTrack(trackIndex: number) {
-    if (trackIndex < 0 || trackIndex >= 4) {
-      throw new Error(`Track index ${trackIndex} out of range (0-3)`);
+    if (trackIndex < 0 || trackIndex >= 6) {
+      throw new Error(`Track index ${trackIndex} out of range (0-5)`);
     }
     return this.tracks[trackIndex];
   }
@@ -538,7 +556,7 @@ export class DrumSynthCRDT {
   merge(state: DrumSynthCRDT["state"]) {
     this.globalSettings.merge(state.global);
 
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 6; i++) {
       if (state.tracks[i]) {
         this.tracks[i].settings.merge(state.tracks[i].settings);
         this.tracks[i].sequence.merge(state.tracks[i].sequence);
