@@ -10,7 +10,9 @@ wss.on("connection", (ws) => {
   ws.on("message", (message) => {
     console.log("[Server] Received:", message.toString());
     wss.clients.forEach((client) => {
-      client.send(message.toString());
+      if (client !== ws && client.readyState === client.OPEN) {
+        client.send(message.toString());
+      }
     });
   });
 
@@ -19,6 +21,7 @@ wss.on("connection", (ws) => {
   });
 });
 
-server.listen(8080, () => {
-  console.log("[Server] Listening on ws://localhost:8080");
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
+  console.log(`[Server] Listening on port ${PORT}`);
 });
