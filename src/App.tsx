@@ -312,6 +312,80 @@ function App() {
             ))}
         </div>
       </div>
+      <div className="px-16 grid place-items-center gap-4 my-12">
+        <div className="text-container px-16 grid place-items-center gap-4 mt-12 border-2 border-amber-600 rounded-sm p-4 max-w-xl bg-zinc-900">
+          <h1>welcome to my lil synth</h1>
+          <p className="text-zinc-100">
+            sealion is a collaborative drum synth that uses a CRDT to
+            synchronize the synth's state across multiple clients. synthesize
+            some terrible beats with your friends and colleagues
+          </p>
+
+          <h2>how to use</h2>
+          <ul>
+            <li>
+              bpm: <span className="text-zinc-100">the tempo of the synth</span>
+            </li>
+            <li>
+              volume:{" "}
+              <span className="text-zinc-100">the volume of the synth</span>
+            </li>
+            <li>
+              swing:{" "}
+              <span className="text-zinc-100">
+                the swing (how much offbeat deviate from the beat) of the synth
+              </span>
+            </li>
+            <li>
+              envelope:{" "}
+              <span className="text-zinc-100">
+                the attack, decay, sustain, and release of the synth of the
+                track you're currently on
+              </span>
+            </li>
+            <li>
+              tracks (T1, etc.):{" "}
+              <span className="text-zinc-100">
+                the track of the synth you are currently modifying
+              </span>
+            </li>
+            <li>
+              click on any of the steps to have the synth on that track play at
+              that beat
+            </li>
+          </ul>
+
+          <h2>synths</h2>
+          <ul className="list-disc align-left">
+            <li>
+              T1 (kick): <span className="text-zinc-100">a membrane synth</span>
+            </li>
+            <li>
+              T2 (snare): <span className="text-zinc-100">a noise synth</span>
+            </li>
+            <li>
+              T3 (snare): <span className="text-zinc-100">a noise synth</span>
+            </li>
+            <li>
+              T4 (hihat): <span className="text-zinc-100">a metal synth</span>
+            </li>
+            <li>
+              T5 (hihat): <span className="text-zinc-100">a metal synth</span>
+            </li>
+            <li>
+              T6 (low tom):{" "}
+              <span className="text-zinc-100">a membrane synth</span>
+            </li>
+          </ul>
+          <p>
+            note:{" "}
+            <span className="text-zinc-100">
+              when you're both in the same location, only have one person
+              playing audio at a time (or not if you want lol)
+            </span>
+          </p>
+        </div>
+      </div>
     </>
   );
 }
