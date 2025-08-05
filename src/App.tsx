@@ -30,8 +30,11 @@ import { useSwing } from "./hooks/useSwing";
 const CURRENT_MODE: "synth" | "drum" = "drum";
 const AUDIO_CONFIG: AudioTrack[] = [
   getTrackOfNote("kick"),
-  getTrackOfNote("snare"),
-  getTrackOfNote("hihat"),
+  getTrackOfNote("snare1"),
+  getTrackOfNote("snare2"),
+  getTrackOfNote("hihat1"),
+  getTrackOfNote("hihat2"),
+  getTrackOfNote("tom"),
 ];
 
 function App() {

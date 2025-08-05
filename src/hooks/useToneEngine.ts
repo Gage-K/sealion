@@ -59,7 +59,7 @@ export function useToneEngine(
         envelope: { attack: 0.001, decay: 0.2, sustain: 0.1, release: 0.05 },
       }).connect(audioConfig[0].node); // get sent straight to output
 
-      const hihat = new Tone.MetalSynth({
+      const hihat1 = new Tone.MetalSynth({
         envelope: { attack: 0.001, decay: 0.1, release: 0.01 },
         harmonicity: 5.1,
         modulationIndex: 32,
@@ -67,12 +67,29 @@ export function useToneEngine(
         octaves: 1.5,
       }).connect(audioConfig[1].node);
 
-      const snare = new Tone.NoiseSynth({
-        noise: { type: "white" },
-        envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.05 },
+      const hihat2 = new Tone.MetalSynth({
+        envelope: { attack: 0.001, decay: 0.1, release: 0.01 },
+        harmonicity: 5.1,
+        modulationIndex: 32,
+        resonance: 4000,
+        octaves: 1.5,
       }).connect(audioConfig[2].node);
 
-      synthsRef.current = [kick, snare, hihat];
+      const snare1 = new Tone.NoiseSynth({
+        noise: { type: "white" },
+        envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.05 },
+      }).connect(audioConfig[3].node);
+
+      const snare2 = new Tone.NoiseSynth({
+        noise: { type: "white" },
+        envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.05 },
+      }).connect(audioConfig[4].node);
+
+      const tom1 = new Tone.MembraneSynth({
+        envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.05 },
+      }).connect(audioConfig[5].node);
+
+      synthsRef.current = [kick, snare1, snare2, hihat1, hihat2, tom1];
       setSynthsReady(true);
       console.log("[Audio Init] Drum synths created...");
 
