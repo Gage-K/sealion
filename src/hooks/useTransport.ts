@@ -3,6 +3,7 @@ import * as Tone from "tone";
 import type { Step } from "../types/crdt";
 import { useCRDT } from "./useCRDT";
 import type { AudioTrack } from "../types/types";
+import { playDrumSynth } from "../config/drumSynthConfig";
 
 /**
  * Initializes and handles the Tone.js clock for controlling playback, triggering audio, setting beat movement, and playing metronome
@@ -21,7 +22,6 @@ export function useTransport(
       | Tone.Synth<Tone.SynthOptions>
     )[]
   >,
-  mode: "synth" | "drum",
   sequenceData: Step[][]
 ) {
   // States
@@ -50,17 +50,7 @@ export function useTransport(
       const note = drumSynthCRDT.getTrackSequence(index)[beatRef.current];
 
       if (note[0]) {
-        if (mode === "drum") {
-          if (synth instanceof Tone.NoiseSynth) {
-            synth.triggerAttackRelease("16n", time);
-          } else if (synth instanceof Tone.MembraneSynth) {
-            synth.triggerAttackRelease("C1", "16n", time);
-          } else if (synth instanceof Tone.MetalSynth) {
-            synth.triggerAttackRelease("C4", "16n", time);
-          }
-        } else {
-          // (synth as Tone.Synth).triggerAttackRelease(note[1], "16n", time);
-        }
+        playDrumSynth(synth, index, time);
       }
     });
 
