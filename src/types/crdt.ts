@@ -1,3 +1,5 @@
+import { DRUM_SYNTH_CONFIG } from "../config/drumSynthConfig";
+
 /**
  * Last Write Wins Register (LWW)
  * If received timestampe is less than local timestamp, register does not change
@@ -405,14 +407,7 @@ class SequencerCRDT {
 export class DrumSynthCRDT {
   readonly id: string;
   readonly globalSettings: GlobalSettingsCRDT;
-  readonly tracks: [
-    { settings: TrackSettingsCRDT; sequence: SequencerCRDT },
-    { settings: TrackSettingsCRDT; sequence: SequencerCRDT },
-    { settings: TrackSettingsCRDT; sequence: SequencerCRDT },
-    { settings: TrackSettingsCRDT; sequence: SequencerCRDT },
-    { settings: TrackSettingsCRDT; sequence: SequencerCRDT },
-    { settings: TrackSettingsCRDT; sequence: SequencerCRDT }
-  ];
+  readonly tracks: { settings: TrackSettingsCRDT; sequence: SequencerCRDT }[];
 
   private listeners: Listener[] = [];
   private unsubscribeFunctions: (() => void)[] = [];
@@ -431,56 +426,20 @@ export class DrumSynthCRDT {
 
     this.globalSettings = new GlobalSettingsCRDT(id, state?.global || {});
 
-    this.tracks = [
-      {
+    this.tracks = DRUM_SYNTH_CONFIG.map((_, index) => {
+      return {
         settings: new TrackSettingsCRDT(
           id,
-          0,
-          state?.tracks?.[0]?.settings || {}
+          index,
+          state?.tracks?.[index]?.settings || {}
         ),
-        sequence: new SequencerCRDT(id, 0, state?.tracks?.[0]?.sequence || {}),
-      },
-      {
-        settings: new TrackSettingsCRDT(
+        sequence: new SequencerCRDT(
           id,
-          1,
-          state?.tracks?.[1]?.settings || {}
+          index,
+          state?.tracks?.[index]?.sequence || {}
         ),
-        sequence: new SequencerCRDT(id, 1, state?.tracks?.[1]?.sequence || {}),
-      },
-      {
-        settings: new TrackSettingsCRDT(
-          id,
-          2,
-          state?.tracks?.[2]?.settings || {}
-        ),
-        sequence: new SequencerCRDT(id, 2, state?.tracks?.[2]?.sequence || {}),
-      },
-      {
-        settings: new TrackSettingsCRDT(
-          id,
-          3,
-          state?.tracks?.[3]?.settings || {}
-        ),
-        sequence: new SequencerCRDT(id, 3, state?.tracks?.[3]?.sequence || {}),
-      },
-      {
-        settings: new TrackSettingsCRDT(
-          id,
-          4,
-          state?.tracks?.[4]?.settings || {}
-        ),
-        sequence: new SequencerCRDT(id, 4, state?.tracks?.[4]?.sequence || {}),
-      },
-      {
-        settings: new TrackSettingsCRDT(
-          id,
-          5,
-          state?.tracks?.[5]?.settings || {}
-        ),
-        sequence: new SequencerCRDT(id, 5, state?.tracks?.[5]?.sequence || {}),
-      },
-    ];
+      };
+    });
 
     this.setupSubscriptions();
   }
@@ -533,7 +492,7 @@ export class DrumSynthCRDT {
 
   // Convenience methods for common operations
   getTrack(trackIndex: number) {
-    if (trackIndex < 0 || trackIndex >= 6) {
+    if (trackIndex < 0 || trackIndex >= DRUM_SYNTH_CONFIG.length) {
       throw new Error(`Track index ${trackIndex} out of range (0-5)`);
     }
     return this.tracks[trackIndex];
@@ -556,7 +515,7 @@ export class DrumSynthCRDT {
   merge(state: DrumSynthCRDT["state"]) {
     this.globalSettings.merge(state.global);
 
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < DRUM_SYNTH_CONFIG.length; i++) {
       if (state.tracks[i]) {
         this.tracks[i].settings.merge(state.tracks[i].settings);
         this.tracks[i].sequence.merge(state.tracks[i].sequence);

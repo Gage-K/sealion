@@ -6,6 +6,7 @@ import type { AudioTrack } from "./types/types";
 import type { Step } from "./types/crdt";
 import { getTrackOfNote } from "./utils/utils";
 import { dotStyles } from "./lib/seqStyles";
+import { DRUM_SYNTH_CONFIG } from "./config/drumSynthConfig";
 
 // components
 import {
@@ -282,7 +283,7 @@ function App() {
           </form>
 
           <PlayButton isPlaying={isPlaying} onToggle={togglePlay} />
-          {AUDIO_CONFIG.map((_, index) => (
+          {DRUM_SYNTH_CONFIG.map((_, index) => (
             <TrackButton
               key={index}
               trackNumber={index + 1}
