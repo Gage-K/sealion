@@ -65,7 +65,6 @@ function App() {
   const { isPlaying, currentStep, togglePlay } = useTransport(
     AUDIO_CONFIG,
     synthsRef,
-    CURRENT_MODE,
     sequenceData
   );
   const { swing, handleSwingChange } = useSwing();

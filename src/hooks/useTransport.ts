@@ -22,7 +22,6 @@ export function useTransport(
       | Tone.Synth<Tone.SynthOptions>
     )[]
   >,
-  mode: "synth" | "drum",
   sequenceData: Step[][]
 ) {
   // States
