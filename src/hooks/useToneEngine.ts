@@ -27,8 +27,6 @@ export function useToneEngine(
         console.warn(`No synth or envelope found for track ${trackIndex}`);
         return;
       }
-
-      console.log(`Updating envelope for track ${trackIndex}`);
       synth.envelope.attack = envelope.attack;
       synth.envelope.decay = envelope.decay;
       synth.envelope.sustain = envelope.sustain;

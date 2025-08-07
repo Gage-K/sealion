@@ -50,7 +50,6 @@ export const useEnvelope = ({
 
   // Update the tone engine when envelope changes
   useEffect(() => {
-    console.log(`track envelope changed`, trackADSR);
     trackADSR.forEach((envelope, index) => {
       if (envelope) {
         updateEnvelope(index, envelope);

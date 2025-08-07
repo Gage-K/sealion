@@ -2,6 +2,12 @@ import { useEffect, useRef } from "react";
 import type { DrumSynthCRDT } from "../types/crdt";
 import { useCRDT } from "./useCRDT.ts";
 
+interface Message {
+  type: "update" | "request";
+  id: string;
+  data?: DrumSynthCRDT["state"];
+}
+
 /**
  * Initializes Web Scoket connections between clients
  * Handles transfer of sequence state for data synchronization
@@ -21,14 +27,46 @@ export function useWebSocketSync() {
     ); // adjust port as needed
     wsRef.current = ws;
 
-    ws.onopen = () => console.log("[WebSocket] Connected");
+    ws.onopen = () => {
+      console.log("[WebSocket] Connected");
+      console.log("[WebSocket] Fetching state...");
+      ws.send(
+        JSON.stringify({ type: "request", id: drumSynthCRDT.globalSettings.id })
+      );
+    };
     ws.onerror = (err) => console.error("[WebSocket] Error:", err);
     ws.onmessage = (event) => {
       try {
-        const remoteState: DrumSynthCRDT["state"] = JSON.parse(event.data);
-        console.log("received remoteState", remoteState);
-        drumSynthCRDT.merge(remoteState);
-        console.log("bpm expected", drumSynthCRDT.globalSettings.bpm);
+        const message: Message = JSON.parse(event.data);
+
+        // Validate message structure
+        if (!message.type || !message.id) {
+          console.warn("[WebSocket] Invalid message format:", message);
+          return;
+        }
+
+        if (
+          message.type === "request" &&
+          message.id !== drumSynthCRDT.globalSettings.id
+        ) {
+          console.log("[WebSocket] Sending state...");
+          sendUpdate(drumSynthCRDT);
+        } else if (
+          message.type === "update" &&
+          message.id !== drumSynthCRDT.globalSettings.id
+        ) {
+          if (message.data) {
+            console.log("[WebSocket] Merging remote state...");
+            const remoteState: DrumSynthCRDT["state"] = message.data;
+            console.log(remoteState);
+            drumSynthCRDT.merge(remoteState);
+          } else {
+            console.warn(
+              "[WebSocket] Update message missing data.state:",
+              message
+            );
+          }
+        }
       } catch (err) {
         console.error("[WebSocket] Data retrieval failed:", err);
       }
@@ -42,11 +80,16 @@ export function useWebSocketSync() {
     return () => {
       // ws.close();
     };
-  }, []);
+  }, [drumSynthCRDT]);
 
   const sendUpdate = (drumSynthCRDT: DrumSynthCRDT) => {
+    const message: Message = {
+      type: "update",
+      id: drumSynthCRDT.globalSettings.id,
+      data: drumSynthCRDT.state,
+    };
     console.log("sending message");
-    wsRef.current?.send(JSON.stringify(drumSynthCRDT.state));
+    wsRef.current?.send(JSON.stringify(message));
   };
 
   return { sendUpdate };
