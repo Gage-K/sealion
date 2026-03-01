@@ -1,5 +1,6 @@
 import { useEffect, useRef, useMemo } from "react";
 import { ArrowsClockwise } from "phosphor-react";
+import Sketch from "./pages/sketch";
 
 // lib
 import type { AudioTrack } from "./types/types";
@@ -37,6 +38,8 @@ const AUDIO_CONFIG: AudioTrack[] = [
   getTrackOfNote("hihat2"),
   getTrackOfNote("tom"),
 ];
+
+const SKIP_RENDER = true;
 
 function App() {
   const drumSynthCRDT = useCRDT();
@@ -80,6 +83,8 @@ function App() {
       updateVolume(volume);
     }
   };
+
+  if (SKIP_RENDER) return <Sketch />;
 
   return (
     <>
@@ -293,8 +298,8 @@ function App() {
           <UtilityButton
             icon={<ArrowsClockwise size={20} />}
             label="Sync"
-            onClick={() => {}}
-            // baseColor="yellow"
+            onClick={() => { }}
+          // baseColor="yellow"
           />
 
           {drumSynthCRDT
