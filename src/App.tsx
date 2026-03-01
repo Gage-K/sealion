@@ -15,7 +15,7 @@ import {
   StepButton,
   TrackButton,
   UtilityButton,
-} from "./components/UI/Button";
+} from "./components/core/Button";
 
 // hooks
 import { useMainVolume } from "./hooks/useMainVolume";
