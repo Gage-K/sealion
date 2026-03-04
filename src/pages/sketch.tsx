@@ -32,6 +32,7 @@ export default function Sketch() {
 
   const [pan, setPan] = useState(0);
   const [selectedTrack, setSelectedTrack] = useState(0);
+  const [selectedEffect, setSelectedEffect] = useState<EffectName>("delay");
   const [effects, setEffects] = useState<EffectsState>(defaultEffects);
   const [lfo, setLfo] = useState<LfoState>(defaultLfo);
 
