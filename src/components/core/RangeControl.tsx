@@ -27,6 +27,7 @@ export default function RangeControl({
   onChange,
   min = 0,
   max = 100,
+  step = 1,
   formatValue,
 }: {
   label: string;
@@ -34,6 +35,7 @@ export default function RangeControl({
   onChange: (value: number) => void;
   min?: number;
   max?: number;
+  step?: number;
   formatValue?: (value: number) => string;
 }) {
   const id = useId();
@@ -54,6 +56,7 @@ export default function RangeControl({
         type="range"
         min={min}
         max={max}
+        step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         className="range-bar cursor-move w-full"
