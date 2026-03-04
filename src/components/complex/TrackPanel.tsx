@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { WaveSquareIcon, WaveSawtoothIcon, WaveSineIcon, WaveTriangleIcon } from "@phosphor-icons/react";
-import type { TrackState, Waveform } from "../../types/synth";
+import type { Waveform } from "../../types/synth";
+import type { Envelope } from "../../types/crdt";
 import Button from "../core/NewButton";
-import RadioGroup from "../core/RadioGroup";
-import RangeControl, { formatPan } from "../core/RangeControl";
+import RangeControl from "../core/RangeControl";
 
 export const waveOptions: { value: Waveform; label: ReactNode }[] = [
   { value: "sine", label: <WaveSineIcon size={20} /> },
@@ -12,50 +12,73 @@ export const waveOptions: { value: Waveform; label: ReactNode }[] = [
   { value: "sawtooth", label: <WaveSawtoothIcon size={20} /> },
 ];
 
+const formatSeconds = (v: number) => `${v}s`;
+
 export default function TrackPanel({
-  tracks,
+  trackNames,
+  envelopes,
   selectedTrack,
   onSelectTrack,
-  onUpdateTrack,
+  onEnvelopeChange,
 }: {
-  tracks: TrackState[];
+  trackNames: string[];
+  envelopes: Envelope[];
   selectedTrack: number;
   onSelectTrack: (i: number) => void;
-  onUpdateTrack: (i: number, patch: Partial<TrackState>) => void;
+  onEnvelopeChange: (trackIndex: number, param: keyof Envelope, value: number) => void;
 }) {
-  const track = tracks[selectedTrack];
-
-  const setField = (field: keyof TrackState, value: number | Waveform) => {
-    onUpdateTrack(selectedTrack, { [field]: value });
-  };
+  const envelope = envelopes[selectedTrack];
 
   return (
     <div className="grid grid-cols-[1fr] gap-y-2">
       <span className="text-zinc-500 text-xs">synth</span>
-      <div className="flex gap-2">
-        {[0, 1, 2, 3].map((i) => (
+      <div className="grid grid-cols-8 gap-1">
+        {trackNames.map((name, i) => (
           <Button
             key={i}
-            className="flex-1"
+            className="col-span-1 text-[10px] px-0"
             active={selectedTrack === i}
             onClick={() => onSelectTrack(i)}
           >
-            {i + 1}
+            {name}
           </Button>
         ))}
       </div>
-      <RangeControl label="att" value={track.attack} onChange={(v) => setField("attack", v)} />
-      <RangeControl label="dec" value={track.decay} onChange={(v) => setField("decay", v)} />
-      <RangeControl label="sus" value={track.sustain} onChange={(v) => setField("sustain", v)} />
-      <RangeControl label="rel" value={track.release} onChange={(v) => setField("release", v)} />
-      <RangeControl label="vol" value={track.vol} onChange={(v) => setField("vol", v)} />
-      <RangeControl label="pan" value={track.pan} min={-50} max={50} onChange={(v) => setField("pan", v)} formatValue={formatPan} />
-      <RadioGroup
-        options={waveOptions}
-        value={track.waveform}
-        onChange={(v) => setField("waveform", v)}
-        name="waveform"
-        className="flex gap-2"
+      <RangeControl
+        label="atk"
+        value={envelope.attack}
+        min={0.001}
+        max={2}
+        step={0.001}
+        onChange={(v) => onEnvelopeChange(selectedTrack, "attack", v)}
+        formatValue={formatSeconds}
+      />
+      <RangeControl
+        label="dec"
+        value={envelope.decay}
+        min={0.001}
+        max={2}
+        step={0.001}
+        onChange={(v) => onEnvelopeChange(selectedTrack, "decay", v)}
+        formatValue={formatSeconds}
+      />
+      <RangeControl
+        label="sus"
+        value={envelope.sustain}
+        min={0.001}
+        max={1}
+        step={0.001}
+        onChange={(v) => onEnvelopeChange(selectedTrack, "sustain", v)}
+        formatValue={formatSeconds}
+      />
+      <RangeControl
+        label="rel"
+        value={envelope.release}
+        min={0.001}
+        max={2}
+        step={0.001}
+        onChange={(v) => onEnvelopeChange(selectedTrack, "release", v)}
+        formatValue={formatSeconds}
       />
     </div>
   );
