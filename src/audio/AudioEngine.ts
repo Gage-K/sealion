@@ -16,6 +16,7 @@ export class AudioEngine {
   private synths: DrumSynth[] = [];
   private gainNodes: Tone.Gain[] = [];
   private volumeNode: Tone.Volume | null = null;
+  private fft: Tone.FFT | null = null;
   private transportEventId: number | null = null;
   beat = 0;
   private crdt: DrumSynthCRDT | null = null;
@@ -29,6 +30,9 @@ export class AudioEngine {
     this.crdt = crdt;
 
     this.volumeNode = new Tone.Volume({ volume: 0, mute: false }).toDestination();
+
+    this.fft = new Tone.FFT(256);
+    this.volumeNode.connect(this.fft);
 
     this.gainNodes = DRUM_SYNTH_CONFIG.map(() => {
       const gain = new Tone.Gain();
@@ -140,6 +144,10 @@ export class AudioEngine {
     synth.envelope.decay = envelope.decay;
     synth.envelope.sustain = envelope.sustain;
     synth.envelope.release = envelope.release;
+  }
+
+  getFFTData(): Float32Array | undefined {
+    return this.fft?.getValue()
   }
 
   dispose() {

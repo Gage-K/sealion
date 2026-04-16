@@ -9,6 +9,7 @@ import EffectPanel from "../components/complex/EffectPanel";
 import LfoPanel from "../components/complex/LfoPanel";
 import Keyboard from "../components/complex/NewKeyboard";
 import StepSequencer from "../components/complex/StepSequencer";
+import FFTVisualizer from "../components/complex/FFTVisualizer";
 import { useAudioEngine } from "../hooks/useAudioEngine";
 import { useCRDT } from "../hooks/useCRDT";
 import { DRUM_SYNTH_CONFIG } from "../config/drumSynthConfig";
@@ -16,6 +17,7 @@ import { DRUM_SYNTH_CONFIG } from "../config/drumSynthConfig";
 export default function Sketch() {
   const crdt = useCRDT();
   const {
+    engineRef,
     isPlaying,
     currentStep,
     bpm,
@@ -71,7 +73,11 @@ export default function Sketch() {
   return (
     <div className="bg-zinc-900 h-screen w-screen text-zinc-100 grid place-items-center text-sm">
       <div className="border border-zinc-600 rounded-sm p-4 grid grid-cols-[repeat(16,minmax(1.5rem,1fr))] gap-4 items-start">
-        <div className="col-span-8 row-start-1 row-span-1 bg-zinc-600 w-full self-stretch">
+        <div className="col-span-8 row-start-1 row-span-1 border border-cyan-400">
+          <div className="bg-cyan-400 m-1">
+            <FFTVisualizer engineRef={engineRef} isPlaying={isPlaying} />
+
+          </div>
         </div>
         <div className="col-span-8 row-start-1 row-span-1">
           <GlobalControls

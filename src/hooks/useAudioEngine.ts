@@ -140,6 +140,7 @@ export function useAudioEngine() {
   );
 
   return {
+    engineRef,
     isPlaying,
     currentStep,
     bpm,
