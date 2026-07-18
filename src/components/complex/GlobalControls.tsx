@@ -25,7 +25,14 @@ export default function GlobalControls({
       <RangeControl label="vol" value={vol} formatValue={formatVolume} onChange={onChangeVol} min={-12} max={8} />
       <RangeControl label="pan" value={pan} min={-50} max={50} onChange={onChangePan} formatValue={formatPan} />
       <RangeControl label="bpm" value={bpm} onChange={onChangeBpm} min={60} max={240} />
-      <RangeControl label="swg" value={swing} onChange={onChangeSwing} min={0} max={25} formatValue={formatPercent} />
+      <RangeControl
+        label="swg"
+        value={Math.round(swing * 100)}
+        onChange={(v) => onChangeSwing(v / 100)}
+        min={0}
+        max={100}
+        formatValue={formatPercent}
+      />
     </div>
   );
 }
