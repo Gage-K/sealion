@@ -1,40 +1,13 @@
 {
-  "name": "sequence",
+  "name": "sealion",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "start": "node app.js"
-  },
-  "dependencies": {
-    "@phosphor-icons/react": "^2.1.10",
-    "@tailwindcss/vite": "^4.1.7",
-    "clsx": "^2.1.1",
-    "phosphor-react": "^1.4.1",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "tailwindcss": "^4.1.7",
-    "tone": "^15.1.22",
-    "ws": "^8.18.2"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.25.0",
-    "@types/node": "^22.15.29",
-    "@types/react": "^19.1.2",
-    "@types/react-dom": "^19.1.2",
-    "@types/ws": "^8.18.1",
-    "@vitejs/plugin-react": "^4.4.1",
-    "eslint": "^9.25.0",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.19",
-    "globals": "^16.0.0",
-    "ts-node": "^10.9.2",
-    "typescript": "~5.8.3",
-    "typescript-eslint": "^8.30.1",
-    "vite": "^6.3.5"
+    "dev": "pnpm --parallel --recursive dev",
+    "build": "pnpm --recursive build",
+    "lint": "pnpm --recursive lint",
+    "dev:client": "pnpm --filter @sealion/client dev",
+    "dev:server": "pnpm --filter @sealion/server dev"
   }
 }
