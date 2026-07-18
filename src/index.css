@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+body {
+  font-family: "Silkscreen", monospace;
+}
+
 .seq-container {
   display: grid;
   gap: 4px;
@@ -18,38 +22,50 @@
   }
 }
 
-.slider {
-  display: flex;
-  justify-items: center;
+.range-bar {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 15px;
-  border-radius: 5px;
-  background: #d3d3d3;
-  outline: none;
-  opacity: 0.7;
-  -webkit-transition: 0.2s;
-  transition: opacity 0.2s;
-  background-color: slategray;
+  height: 1rem;
+  border: 1px solid #a1a1aa;
+  padding: 3px;
+  background: transparent;
+  cursor: pointer;
 }
 
-.slider::-webkit-slider-thumb {
+.range-bar::-webkit-slider-runnable-track {
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    #e4e4e7 0%,
+    #e4e4e7 var(--val),
+    transparent var(--val),
+    transparent 100%
+  );
+}
+
+.range-bar::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: black;
-  cursor: pointer;
+  width: 0;
+  height: 0;
 }
 
-.slider::-moz-range-thumb {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: black;
-  cursor: pointer;
+.range-bar::-moz-range-track {
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    #e4e4e7 0%,
+    #e4e4e7 var(--val),
+    transparent var(--val),
+    transparent 100%
+  );
+}
+
+.range-bar::-moz-range-thumb {
+  width: 0;
+  height: 0;
+  border: none;
 }
 
 /* a[href^="https://"] {

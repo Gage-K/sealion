@@ -493,7 +493,7 @@ export class DrumSynthCRDT {
   // Convenience methods for common operations
   getTrack(trackIndex: number) {
     if (trackIndex < 0 || trackIndex >= DRUM_SYNTH_CONFIG.length) {
-      throw new Error(`Track index ${trackIndex} out of range (0-5)`);
+      throw new Error(`Track index ${trackIndex} out of range (0-${DRUM_SYNTH_CONFIG.length - 1})`);
     }
     return this.tracks[trackIndex];
   }
@@ -525,43 +525,3 @@ export class DrumSynthCRDT {
     this.notify();
   }
 }
-
-// const agentASequencer = new SequencerCRDT("agentA", 0, {});
-
-// agentASequencer.setStep(0, [true]);
-
-// agentASequencer.setStep(0, [false]);
-
-// agentASequencer.setStep(10, [true]);
-
-// const agentADrum = new DrumSynthCRDT("agentA", {});
-
-// // console.log(agentADrum.state.tracks[0].sequence);
-// agentADrum.getTrack(0).sequence.setStep(0, [true]);
-// agentADrum.getTrack(0).sequence.setStep(0, [false]);
-// agentADrum.getTrack(0).sequence.setStep(10, [true]);
-// // console.log(agentADrum.state.tracks[0].sequence);
-
-// const agentBDrum = new DrumSynthCRDT("agentB", {});
-
-// // console.log(agentBDrum.state.tracks[0].sequence);
-// agentBDrum.getTrack(0).sequence.setStep(0, [true]);
-// agentBDrum.getTrack(0).sequence.setStep(0, [false]);
-// agentBDrum.getTrack(0).sequence.setStep(10, [true]);
-// // console.log(agentBDrum.state.tracks[0].sequence);
-
-// agentBDrum.merge(agentADrum.state);
-
-// console.log(agentBDrum.state.tracks[0].sequence);
-
-// console.log(
-//   JSON.stringify(agentBDrum.tracks[0].sequence.fullSequence, null, 2)
-// );
-
-// agentADrum.tracks[0].sequence.setStep(0, [true]);
-
-// agentBDrum.merge(agentADrum.state);
-
-// console.log(
-//   JSON.stringify(agentBDrum.tracks[0].sequence.fullSequence, null, 2)
-// );

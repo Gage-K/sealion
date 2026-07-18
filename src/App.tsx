@@ -1,10 +1,9 @@
 import { useEffect, useRef, useMemo } from "react";
 import { ArrowsClockwise } from "phosphor-react";
+import Sketch from "./pages/sketch";
 
 // lib
-import type { AudioTrack } from "./types/types";
 import type { Step } from "./types/crdt";
-import { getTrackOfNote } from "./utils/utils";
 import { dotStyles } from "./lib/seqStyles";
 import { DRUM_SYNTH_CONFIG } from "./config/drumSynthConfig";
 
@@ -14,33 +13,18 @@ import {
   StepButton,
   TrackButton,
   UtilityButton,
-} from "./components/UI/Button";
+} from "./components/core/Button";
 
 // hooks
-import { useMainVolume } from "./hooks/useMainVolume";
-import { useTransport } from "./hooks/useTransport";
-import { useToneEngine } from "./hooks/useToneEngine";
-import { useBPM } from "./hooks/useBPM";
-import { useEnvelope } from "./hooks/useEnvelope";
 import { useCurrentTrack } from "./hooks/useCurrentTrack";
 import { useCRDT } from "./hooks/useCRDT";
 import { useSequence } from "./hooks/useSequence";
-import { useSwing } from "./hooks/useSwing";
+import { useAudioEngine } from "./hooks/useAudioEngine";
 
-// constants
-const CURRENT_MODE: "synth" | "drum" = "drum";
-const AUDIO_CONFIG: AudioTrack[] = [
-  getTrackOfNote("kick"),
-  getTrackOfNote("snare1"),
-  getTrackOfNote("snare2"),
-  getTrackOfNote("hihat1"),
-  getTrackOfNote("hihat2"),
-  getTrackOfNote("tom"),
-];
+const SKIP_RENDER = true;
 
 function App() {
   const drumSynthCRDT = useCRDT();
-  // Defensive code guarding against multiple re-renders
   const hasInit = useRef(false);
 
   const sequenceData: Step[][] = useMemo(() => {
@@ -49,7 +33,6 @@ function App() {
 
   useEffect(() => {
     if (hasInit.current) return;
-
     hasInit.current = true;
   }, [drumSynthCRDT]);
 
@@ -57,29 +40,27 @@ function App() {
   const { handleSequenceChange } = useSequence({
     currentTrackIndex: currentTrackIndex,
   });
-  const { synthsRef, updateEnvelope } = useToneEngine(
-    CURRENT_MODE,
-    AUDIO_CONFIG
-  );
-  const { volume, updateVolume } = useMainVolume(AUDIO_CONFIG);
-  const { isPlaying, currentStep, togglePlay } = useTransport(
-    AUDIO_CONFIG,
-    synthsRef,
-    sequenceData
-  );
-  const { swing, handleSwingChange } = useSwing();
-  const { bpm, handleBPMChange } = useBPM();
-  const { handleADSRChange } = useEnvelope({
-    updateEnvelope: updateEnvelope,
-    currentTrackIndex: currentTrackIndex,
-  });
+  const {
+    isPlaying,
+    currentStep,
+    bpm,
+    swing,
+    volume,
+    togglePlay,
+    handleBPMChange,
+    handleSwingChange,
+    handleVolumeChange,
+    handleEnvelopeChange,
+  } = useAudioEngine();
 
   const handleMainVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const volume = parseFloat(e.target.value);
-    if (!isNaN(volume)) {
-      updateVolume(volume);
+    const vol = parseFloat(e.target.value);
+    if (!isNaN(vol)) {
+      handleVolumeChange(vol);
     }
   };
+
+  if (SKIP_RENDER) return <Sketch />;
 
   return (
     <>
@@ -114,7 +95,7 @@ function App() {
                 max="240"
                 step={1}
                 value={bpm}
-                onChange={handleBPMChange}
+                onChange={(e) => handleBPMChange(parseInt(e.target.value))}
               />
             </div>
             <div className="grid grid-cols-4 items-center">
@@ -144,24 +125,9 @@ function App() {
                 max={0.25}
                 step={0.01}
                 value={swing}
-                onChange={handleSwingChange}
+                onChange={(e) => handleSwingChange(parseFloat(e.target.value))}
               />
             </div>
-            {/* <div className="grid grid-cols-4 items-center">
-              <label htmlFor="pan" className={dotStyles.label}>
-                Pan
-              </label>
-              <input
-                id="pan"
-                className={dotStyles.input}
-                type="range"
-                min={-50}
-                max={50}
-                step={1}
-                value={volume}
-                onChange={() => {}}
-              />
-            </div> */}
           </form>
 
           <section className="display row-span-2 col-span-4 text-amber-600 bg-amber-950/20 rounded-sm m-1 border border-amber-600 p-2 text-md gap-1 grid grid-rows-1 grid-cols-2 display-info">
@@ -215,7 +181,7 @@ function App() {
                     .attack
                 }
                 onChange={(e) =>
-                  handleADSRChange("attack", parseFloat(e.target.value))
+                  handleEnvelopeChange(currentTrackIndex, "attack", parseFloat(e.target.value))
                 }
               />
             </div>
@@ -235,7 +201,7 @@ function App() {
                     .decay
                 }
                 onChange={(e) =>
-                  handleADSRChange("decay", parseFloat(e.target.value))
+                  handleEnvelopeChange(currentTrackIndex, "decay", parseFloat(e.target.value))
                 }
               />
             </div>
@@ -255,7 +221,7 @@ function App() {
                     .sustain
                 }
                 onChange={(e) =>
-                  handleADSRChange("sustain", parseFloat(e.target.value))
+                  handleEnvelopeChange(currentTrackIndex, "sustain", parseFloat(e.target.value))
                 }
               />
             </div>
@@ -275,7 +241,7 @@ function App() {
                     .release
                 }
                 onChange={(e) =>
-                  handleADSRChange("release", parseFloat(e.target.value))
+                  handleEnvelopeChange(currentTrackIndex, "release", parseFloat(e.target.value))
                 }
               />
             </div>
@@ -293,8 +259,7 @@ function App() {
           <UtilityButton
             icon={<ArrowsClockwise size={20} />}
             label="Sync"
-            onClick={() => {}}
-            // baseColor="yellow"
+            onClick={() => { }}
           />
 
           {drumSynthCRDT

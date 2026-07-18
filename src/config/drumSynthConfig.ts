@@ -22,7 +22,7 @@ interface DrumSynthConfig {
 
 export const DRUM_SYNTH_CONFIG: DrumSynthConfig[] = [
   {
-    name: "Kick",
+    name: "1",
     type: "membrane",
     note: "C1",
     envelope: {
@@ -33,7 +33,7 @@ export const DRUM_SYNTH_CONFIG: DrumSynthConfig[] = [
     },
   },
   {
-    name: "Snare A",
+    name: "2",
     type: "noise",
     note: "C1",
     envelope: {
@@ -47,7 +47,7 @@ export const DRUM_SYNTH_CONFIG: DrumSynthConfig[] = [
     },
   },
   {
-    name: "Hihat A",
+    name: "3",
     type: "metal",
     note: "C2",
     envelope: {
@@ -64,7 +64,7 @@ export const DRUM_SYNTH_CONFIG: DrumSynthConfig[] = [
     },
   },
   {
-    name: "Hihat B",
+    name: "4",
     type: "metal",
     note: "C4",
     envelope: {
@@ -81,7 +81,7 @@ export const DRUM_SYNTH_CONFIG: DrumSynthConfig[] = [
     },
   },
   {
-    name: "Tom A",
+    name: "5",
     type: "membrane",
     note: "C3",
     envelope: {
@@ -92,9 +92,34 @@ export const DRUM_SYNTH_CONFIG: DrumSynthConfig[] = [
     },
   },
   {
-    name: "Tom B",
+    name: "6",
     type: "membrane",
     note: "C4",
+    envelope: {
+      attack: 0.001,
+      decay: 0.001,
+      sustain: 0.001,
+      release: 0.001,
+    },
+  },
+  {
+    name: "7",
+    type: "noise",
+    note: "C1",
+    envelope: {
+      attack: 0.001,
+      decay: 0.001,
+      sustain: 0.001,
+      release: 0.001,
+    },
+    synthOptions: {
+      noise: { type: "pink" },
+    },
+  },
+  {
+    name: "8",
+    type: "membrane",
+    note: "G4",
     envelope: {
       attack: 0.001,
       decay: 0.001,
