@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useCRDT } from "./useCRDT";
 import type { Step } from "../types/crdt";
-import { useWebSocketSync } from "./useWebSocketSync";
+import { useWebSocket } from "./useWebSocket";
 
 interface UseSequenceProps {
   currentTrackIndex: number;
@@ -16,7 +16,7 @@ export const useSequence = ({
   currentTrackIndex,
 }: UseSequenceProps): UseSequenceReturn => {
   const drumSynthCRDT = useCRDT();
-  const { sendUpdate } = useWebSocketSync();
+  const { sendUpdate } = useWebSocket();
   const [sequence, setSequence] = useState(
     drumSynthCRDT.getTrackSequence(currentTrackIndex)
   );

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioEngine } from "../audio/AudioEngine";
 import { useCRDT } from "./useCRDT";
-import { useWebSocketSync } from "./useWebSocketSync";
+import { useWebSocket } from "./useWebSocket";
 import type { Envelope } from "../types/crdt";
 
 export function useAudioEngine() {
   const crdt = useCRDT();
-  const { sendUpdate } = useWebSocketSync();
+  const { sendUpdate } = useWebSocket();
   const engineRef = useRef<AudioEngine | null>(null);
   const crdtRef = useRef(crdt);
   crdtRef.current = crdt;
