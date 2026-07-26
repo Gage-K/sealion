@@ -1,8 +1,5 @@
 import * as Tone from "tone";
-import {
-  DRUM_SYNTH_CONFIG,
-  playDrumSynth,
-} from "../config/drumSynthConfig";
+import { DRUM_SYNTH_CONFIG, playDrumSynth } from "../config/drumSynthConfig";
 import type { DrumSynthCRDT } from "../types/crdt";
 import type { Envelope } from "../types/crdt";
 
@@ -19,17 +16,39 @@ export class AudioEngine {
   private fft: Tone.FFT | null = null;
   private transportEventId: number | null = null;
   beat = 0;
+  isPlaying = false;
+  volume = 0;
   private crdt: DrumSynthCRDT | null = null;
+  private crdtUnsubs: (() => void)[] = [];
   private disposed = false;
 
-  onPlayingChange: ((playing: boolean) => void) | null = null;
+  private listeners: (() => void)[] = [];
+
+  subscribe = (listener: () => void) => {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter((l) => l !== listener);
+    };
+  };
+
+  private notify() {
+    this.listeners.forEach((l) => l());
+  }
+
+  getIsPlaying = () => this.isPlaying;
+  getBeat = () => this.beat;
+  getVolume = () => this.volume;
 
   init(crdt: DrumSynthCRDT) {
     if (this.synths.length > 0) return;
 
     this.crdt = crdt;
+    this.disposed = false;
 
-    this.volumeNode = new Tone.Volume({ volume: 0, mute: false }).toDestination();
+    this.volumeNode = new Tone.Volume({
+      volume: 0,
+      mute: false,
+    }).toDestination();
 
     this.fft = new Tone.FFT(256);
     this.volumeNode.connect(this.fft);
@@ -52,7 +71,7 @@ export class AudioEngine {
       switch (config.type) {
         case "membrane":
           return new Tone.MembraneSynth({ envelope: envelopeOpts }).connect(
-            this.gainNodes[i]
+            this.gainNodes[i],
           );
         case "metal":
           return new Tone.MetalSynth({
@@ -74,6 +93,23 @@ export class AudioEngine {
     transport.stop();
     transport.position = 0;
     this.beat = 0;
+
+    this.setBPM(crdt.globalSettings.bpm);
+    this.setSwing(crdt.globalSettings.swing);
+
+    this.crdtUnsubs.push(
+      crdt.globalSettings.subscribe(() => {
+        this.setBPM(crdt.globalSettings.bpm);
+        this.setSwing(crdt.globalSettings.swing);
+      }),
+    );
+    crdt.tracks.forEach((track, i) => {
+      this.crdtUnsubs.push(
+        track.settings.subscribe(() => {
+          this.updateEnvelope(i, track.settings.envelope);
+        }),
+      );
+    });
   }
 
   private repeat(time: number) {
@@ -89,6 +125,7 @@ export class AudioEngine {
     }
 
     this.beat = (this.beat + 1) % 16;
+    this.notify();
   }
 
   async togglePlay() {
@@ -106,7 +143,8 @@ export class AudioEngine {
       }
       transport.seconds = 0;
       this.beat = 0;
-      this.onPlayingChange?.(false);
+      this.isPlaying = false;
+      this.notify();
     } else {
       transport.cancel();
       this.transportEventId = null;
@@ -115,10 +153,11 @@ export class AudioEngine {
       // Schedule a single fresh repeat from position 0
       this.transportEventId = transport.scheduleRepeat(
         (time) => this.repeat(time),
-        "16n"
+        "16n",
       );
       transport.start();
-      this.onPlayingChange?.(true);
+      this.isPlaying = true;
+      this.notify();
     }
   }
 
@@ -132,9 +171,11 @@ export class AudioEngine {
 
   setVolume(db: number) {
     const clamped = Math.min(Math.max(db, -12), 8);
+    this.volume = clamped;
     if (this.volumeNode) {
       this.volumeNode.volume.value = clamped;
     }
+    this.notify();
   }
 
   updateEnvelope(trackIndex: number, envelope: Envelope) {
@@ -147,11 +188,14 @@ export class AudioEngine {
   }
 
   getFFTData(): Float32Array | undefined {
-    return this.fft?.getValue()
+    return this.fft?.getValue();
   }
 
   dispose() {
     this.disposed = true;
+
+    this.crdtUnsubs.forEach((u) => u());
+    this.crdtUnsubs = [];
 
     const transport = Tone.getTransport();
     transport.stop();
@@ -173,6 +217,8 @@ export class AudioEngine {
     }
 
     this.crdt = null;
-    this.onPlayingChange = null;
+    this.listeners = [];
+    this.isPlaying = false;
+    this.beat = 0;
   }
 }

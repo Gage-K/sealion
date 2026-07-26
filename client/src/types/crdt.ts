@@ -412,6 +412,15 @@ export class DrumSynthCRDT {
   private listeners: Listener[] = [];
   private unsubscribeFunctions: (() => void)[] = [];
 
+  // Cached, referentially-stable snapshots for useSyncExternalStore. Each is
+  // rebuilt lazily only after the relevant sub-store changes, so getSnapshot
+  // returns the SAME reference until that data actually changes — required, or
+  // useSyncExternalStore re-renders in an infinite loop.
+  private gridSnapshot: boolean[][] = [];
+  private gridDirty = true;
+  private envelopesSnapshot: Envelope[] = [];
+  private envelopesDirty = true;
+
   constructor(
     id: string,
     state?: {
@@ -445,33 +454,64 @@ export class DrumSynthCRDT {
   }
 
   private setupSubscriptions() {
-    // Subscribe to global settings changes
+    // Global settings changes don't affect the cached array snapshots.
     this.unsubscribeFunctions.push(
       this.globalSettings.subscribe(() => this.notify())
     );
 
-    // Subscribe to each track's settings and sequence changes
+    // Track changes invalidate the matching cached snapshot before notifying.
     this.tracks.forEach((track) => {
       this.unsubscribeFunctions.push(
-        track.settings.subscribe(() => this.notify())
+        track.settings.subscribe(() => {
+          this.envelopesDirty = true;
+          this.notify();
+        })
       );
       this.unsubscribeFunctions.push(
-        track.sequence.subscribe(() => this.notify())
+        track.sequence.subscribe(() => {
+          this.gridDirty = true;
+          this.notify();
+        })
       );
     });
   }
 
-  // Subscription methods for external listeners (like WebSocket sync)
-  subscribe(listener: Listener) {
+  // Arrow field: useSyncExternalStore calls subscribe bare (no `this`), so it
+  // must be bound to the instance.
+  subscribe = (listener: Listener) => {
     this.listeners.push(listener);
     return () => {
       this.listeners = this.listeners.filter((l) => l !== listener);
     };
-  }
+  };
 
   private notify() {
     this.listeners.forEach((l) => l());
   }
+
+  // --- Stable snapshot getters for useSyncExternalStore --------------------
+  // Arrow fields so they can be passed as bare references. Primitives are
+  // inherently stable; arrays are served from the caches above.
+
+  getBpm = () => this.globalSettings.bpm;
+
+  getSwing = () => this.globalSettings.swing;
+
+  getEnvelopes = (): Envelope[] => {
+    if (this.envelopesDirty) {
+      this.envelopesSnapshot = this.tracks.map((t) => t.settings.envelope);
+      this.envelopesDirty = false;
+    }
+    return this.envelopesSnapshot;
+  };
+
+  getSequenceGrid = (): boolean[][] => {
+    if (this.gridDirty) {
+      this.gridSnapshot = this.tracks.map((t) => t.sequence.fullSequence);
+      this.gridDirty = false;
+    }
+    return this.gridSnapshot;
+  };
 
   // Clean up subscriptions
   destroy() {
