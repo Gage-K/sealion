@@ -1,353 +1,133 @@
-import { useEffect, useRef } from "react";
-import { ArrowsClockwise } from "phosphor-react";
-import Sketch from "./pages/sketch";
-
-// lib
-import { dotStyles } from "./lib/seqStyles";
+import { useState } from "react";
+import { PlayIcon, PauseIcon } from "@phosphor-icons/react";
+import type { EffectName, EffectsState, LfoState } from "./types/synth";
+import { defaultEffects, defaultLfo } from "./types/synth";
+import Button from "./components/core/NewButton";
+import GlobalControls from "./components/complex/GlobalControls";
+import TrackPanel from "./components/complex/TrackPanel";
+import EffectPanel from "./components/complex/EffectPanel";
+import LfoPanel from "./components/complex/LfoPanel";
+import Keyboard from "./components/complex/NewKeyboard";
+import StepSequencer from "./components/complex/StepSequencer";
+import FFTVisualizer from "./components/complex/FFTVisualizer";
 import { DRUM_SYNTH_CONFIG } from "./config/drumSynthConfig";
-
-// components
 import {
-  PlayButton,
-  StepButton,
-  TrackButton,
-  UtilityButton,
-} from "./components/core/Button";
+  useBpm,
+  useSwing,
+  useVolume,
+  useIsPlaying,
+  useCurrentStep,
+  useEnvelopes,
+  useSequenceGrid,
+} from "./hooks/useSynthState";
+import { useAudioActions } from "./hooks/useAudioActions";
 
-// hooks
-import { useCurrentTrack } from "./hooks/useCurrentTrack";
-import { useCRDT } from "./hooks/useCRDT";
-import { useSequence } from "./hooks/useSequence";
-import { useAudioEngine } from "./hooks/useAudioEngine";
-
-const SKIP_RENDER = true;
-
-function App() {
-  const drumSynthCRDT = useCRDT();
-  const hasInit = useRef(false);
-
-  useEffect(() => {
-    if (hasInit.current) return;
-    hasInit.current = true;
-  }, [drumSynthCRDT]);
-
-  const { currentTrackIndex, updateCurrentTrackIndex } = useCurrentTrack();
-  const { handleSequenceChange } = useSequence({
-    currentTrackIndex: currentTrackIndex,
-  });
+export default function App() {
+  const isPlaying = useIsPlaying();
+  const currentStep = useCurrentStep();
+  const bpm = useBpm();
+  const swing = useSwing();
+  const volume = useVolume();
+  const envelopes = useEnvelopes();
+  const sequenceGrid = useSequenceGrid();
   const {
-    isPlaying,
-    currentStep,
-    bpm,
-    swing,
-    volume,
     togglePlay,
     handleBPMChange,
     handleSwingChange,
     handleVolumeChange,
     handleEnvelopeChange,
-  } = useAudioEngine();
+    handleSequenceToggle,
+  } = useAudioActions();
 
-  const handleMainVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const vol = parseFloat(e.target.value);
-    if (!isNaN(vol)) {
-      handleVolumeChange(vol);
-    }
+  const [pan, setPan] = useState(0);
+  const [selectedTrack, setSelectedTrack] = useState(0);
+  const [selectedEffect, setSelectedEffect] = useState<EffectName>("delay");
+  const [effects, setEffects] = useState<EffectsState>(defaultEffects);
+  const [lfo, setLfo] = useState<LfoState>(defaultLfo);
+
+  const updateLfo = (patch: Partial<LfoState>) => {
+    setLfo((prev) => ({ ...prev, ...patch }));
   };
 
-  if (SKIP_RENDER) return <Sketch />;
+  const [showKeyboard, setShowKeyboard] = useState(false);
+  const [octave, setOctave] = useState(2);
+
+  const updateEffect = <K extends EffectName>(name: K, patch: Partial<EffectsState[K]>) => {
+    setEffects((prev) => ({
+      ...prev,
+      [name]: { ...prev[name], ...patch },
+    }));
+  };
+
+  const numTracks = DRUM_SYNTH_CONFIG.length;
 
   return (
-    <>
-      <div className="px-16 grid place-items-center gap-4 mt-12">
-        <div className="seq-container p-1 bg-zinc-900 rounded-sm flex shrink-1 border-16 border-zinc-300 shadow-lg">
-          <section className="display row-span-2 col-span-4 text-amber-600 bg-amber-950/20 rounded-sm m-1 border border-amber-600 p-2 text-md gap-1 grid grid-rows-1 grid-cols-2">
-            <div className="display-info">
-              <h1>SEALION-1000</h1>
-              <h2>TRACK {currentTrackIndex + 1}</h2>
-              <ul>
-                <li>Track Vol: 0 db</li>
-              </ul>
-            </div>
-            <ul>
-              <li>Vol: {volume} db</li>
-              <li>BPM: {bpm}</li>
-              <li>Step: {currentStep === null ? "0" : currentStep + 1}</li>
-              <li>Swing: {Math.floor(swing * 100)}%</li>
-            </ul>
-            <div></div>
-          </section>
-          <form className="rounded-sm inset-shadow-md col-start-5 col-span-4 row-span-2 bg-zinc-300 p-2 inset-shadow-zinc-50/75 inset-shadow-sm grid items-center">
-            <div className="grid grid-cols-4 items-center">
-              <label htmlFor="tempo" className={dotStyles.label}>
-                BPM
-              </label>
-              <input
-                id="tempo"
-                className={dotStyles.input}
-                type="range"
-                min="1"
-                max="240"
-                step={1}
-                value={bpm}
-                onChange={(e) => handleBPMChange(parseInt(e.target.value))}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center">
-              <label htmlFor="volume" className={dotStyles.label}>
-                Volume
-              </label>
-              <input
-                id="volume"
-                className={dotStyles.input}
-                type="range"
-                min={-12}
-                max={8}
-                step={0.01}
-                value={volume}
-                onChange={handleMainVolumeChange}
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center">
-              <label htmlFor="swing" className={dotStyles.label}>
-                Swing
-              </label>
-              <input
-                id="swing"
-                className={dotStyles.input}
-                type="range"
-                min={0}
-                max={0.25}
-                step={0.01}
-                value={swing}
-                onChange={(e) => handleSwingChange(parseFloat(e.target.value))}
-              />
-            </div>
-          </form>
+    <div className="bg-zinc-900 h-screen w-screen text-zinc-100 grid place-items-center text-sm">
+      <div className="border border-zinc-600 rounded-sm p-4 grid grid-cols-[repeat(16,minmax(1.5rem,1fr))] gap-4 items-start">
+        <div className="col-span-8 row-start-1 row-span-1 border border-cyan-400">
+          <div className="bg-cyan-400 m-1">
+            <FFTVisualizer />
 
-          <section className="display row-span-2 col-span-4 text-amber-600 bg-amber-950/20 rounded-sm m-1 border border-amber-600 p-2 text-md gap-1 grid grid-rows-1 grid-cols-2 display-info">
-            <h2>ENVELOPE</h2>
-            <ul>
-              <li>
-                Attack:{" "}
-                {
-                  drumSynthCRDT.tracks[currentTrackIndex].settings.envelope
-                    .attack
-                }
-              </li>
-              <li>
-                Decay:{" "}
-                {
-                  drumSynthCRDT.tracks[currentTrackIndex].settings.envelope
-                    .decay
-                }
-              </li>
-              <li>
-                Sustain:{" "}
-                {
-                  drumSynthCRDT.tracks[currentTrackIndex].settings.envelope
-                    .sustain
-                }
-              </li>
-              <li>
-                Release:{" "}
-                {
-                  drumSynthCRDT.tracks[currentTrackIndex].settings.envelope
-                    .release
-                }
-              </li>
-            </ul>
-          </section>
-
-          <form className="rounded-sm inset-shadow-md col-start-5 col-span-4 row-span-2 bg-zinc-300 p-2 inset-shadow-zinc-50/75 inset-shadow-sm grid items-center">
-            <div className="grid grid-cols-4 items-center">
-              <label htmlFor="attack" className={dotStyles.label}>
-                Attack
-              </label>
-              <input
-                id="attack"
-                className={dotStyles.input}
-                type="range"
-                min={0.01}
-                max={2}
-                step={0.01}
-                value={
-                  drumSynthCRDT.tracks[currentTrackIndex].settings.envelope
-                    .attack
-                }
-                onChange={(e) =>
-                  handleEnvelopeChange(currentTrackIndex, "attack", parseFloat(e.target.value))
-                }
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center">
-              <label htmlFor="decay" className={dotStyles.label}>
-                Decay
-              </label>
-              <input
-                id="decay"
-                className={dotStyles.input}
-                type="range"
-                min={0.01}
-                max={2}
-                step={0.01}
-                value={
-                  drumSynthCRDT.tracks[currentTrackIndex].settings.envelope
-                    .decay
-                }
-                onChange={(e) =>
-                  handleEnvelopeChange(currentTrackIndex, "decay", parseFloat(e.target.value))
-                }
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center">
-              <label htmlFor="sustain" className={dotStyles.label}>
-                Sustain
-              </label>
-              <input
-                id="sustain"
-                className={dotStyles.input}
-                type="range"
-                min={0.01}
-                max={1}
-                step={0.01}
-                value={
-                  drumSynthCRDT.tracks[currentTrackIndex].settings.envelope
-                    .sustain
-                }
-                onChange={(e) =>
-                  handleEnvelopeChange(currentTrackIndex, "sustain", parseFloat(e.target.value))
-                }
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center">
-              <label htmlFor="release" className={dotStyles.label}>
-                Release
-              </label>
-              <input
-                id="release"
-                className={dotStyles.input}
-                type="range"
-                min={0.01}
-                max={2}
-                step={0.01}
-                value={
-                  drumSynthCRDT.tracks[currentTrackIndex].settings.envelope
-                    .release
-                }
-                onChange={(e) =>
-                  handleEnvelopeChange(currentTrackIndex, "release", parseFloat(e.target.value))
-                }
-              />
-            </div>
-          </form>
-
-          <PlayButton isPlaying={isPlaying} onToggle={togglePlay} />
-          {DRUM_SYNTH_CONFIG.map((_, index) => (
-            <TrackButton
-              key={index}
-              trackNumber={index + 1}
-              isActive={currentTrackIndex === index}
-              onSelect={() => updateCurrentTrackIndex(index)}
-            />
-          ))}
-          <UtilityButton
-            icon={<ArrowsClockwise size={20} />}
-            label="Sync"
-            onClick={() => { }}
+          </div>
+        </div>
+        <div className="col-span-8 row-start-1 row-span-1">
+          <GlobalControls
+            vol={volume}
+            pan={pan}
+            bpm={bpm}
+            swing={swing}
+            onChangeVol={handleVolumeChange}
+            onChangePan={setPan}
+            onChangeBpm={handleBPMChange}
+            onChangeSwing={handleSwingChange}
           />
-
-          {drumSynthCRDT
-            .getTrackSequence(currentTrackIndex)
-            .map((step, stepIndex) => (
-              <StepButton
-                key={stepIndex}
-                stepNumber={stepIndex + 1}
-                isCurrent={currentStep === stepIndex}
-                isActive={step[0]}
-                onToggle={() =>
-                  handleSequenceChange(currentTrackIndex, stepIndex)
-                }
-              />
-            ))}
+        </div>
+        <div className="col-span-8 row-start-2 row-span-1">
+          <EffectPanel
+            effects={effects}
+            selectedEffect={selectedEffect}
+            onSelectEffect={setSelectedEffect}
+            onUpdateEffect={updateEffect}
+          />
+        </div>
+        <div className="col-span-8 row-start-2 row-span-3">
+          <TrackPanel
+            trackNames={DRUM_SYNTH_CONFIG.map((c) => c.name)}
+            envelopes={envelopes}
+            selectedTrack={selectedTrack}
+            onSelectTrack={setSelectedTrack}
+            onEnvelopeChange={handleEnvelopeChange}
+          />
+        </div>
+        <div className="col-span-8 row-start-3 row-span-1">
+          <LfoPanel lfo={lfo} onUpdateLfo={updateLfo} />
+        </div>
+        <div className="col-span-full row-start-5 grid grid-cols-subgrid">
+          <Button className="col-span-2" active onClick={() => setShowKeyboard(!showKeyboard)}>{showKeyboard ? "SEQ" : "KEY"}</Button>
+          <Button className="col-span-2 grid place-items-center" active={isPlaying} activeClassName="bg-red-500 text-zinc-100" onClick={togglePlay} ariaLabel={isPlaying ? "Pause playback" : "Start playback"}>
+            {isPlaying ? <PauseIcon size={12} weight="fill" /> : <PlayIcon size={12} weight="fill" />}
+          </Button>
+          <Button className="col-span-2" onClick={() => setOctave((o) => Math.max(1, o - 1))} ariaLabel="Decrease octave">OCT-</Button>
+          <Button className="col-span-2" onClick={() => setOctave((o) => Math.min(6, o + 1))} ariaLabel="Increase octave">OCT+</Button>
+        </div>
+        <div className="col-span-16 row-start-6 grid grid-cols-subgrid min-h-48">
+          {showKeyboard ?
+            <Keyboard
+              octaves={2}
+              baseOctave={octave}
+              onNoteDown={(note) => console.log("down", note)}
+              onNoteUp={(note) => console.log("up", note)}
+            /> :
+            <StepSequencer
+              rows={numTracks}
+              cols={16}
+              steps={sequenceGrid}
+              currentStep={currentStep}
+              onToggle={(row, col) => handleSequenceToggle(row, col)}
+            />
+          }
         </div>
       </div>
-      <div className="px-16 grid place-items-center gap-4 my-12">
-        <div className="text-container px-16 grid place-items-center gap-4 mt-12 border-2 border-amber-600 rounded-sm p-4 max-w-xl bg-zinc-900">
-          <h1>welcome to my lil synth</h1>
-          <p className="text-zinc-100">
-            sealion is a collaborative drum synth that uses a CRDT to
-            synchronize the synth's state across multiple clients. synthesize
-            some terrible beats with your friends and colleagues
-          </p>
-
-          <h2>how to use</h2>
-          <ul>
-            <li>
-              bpm: <span className="text-zinc-100">the tempo of the synth</span>
-            </li>
-            <li>
-              volume:{" "}
-              <span className="text-zinc-100">the volume of the synth</span>
-            </li>
-            <li>
-              swing:{" "}
-              <span className="text-zinc-100">
-                the swing (how much offbeat deviate from the beat) of the synth
-              </span>
-            </li>
-            <li>
-              envelope:{" "}
-              <span className="text-zinc-100">
-                the attack, decay, sustain, and release of the synth of the
-                track you're currently on
-              </span>
-            </li>
-            <li>
-              tracks (T1, etc.):{" "}
-              <span className="text-zinc-100">
-                the track of the synth you are currently modifying
-              </span>
-            </li>
-            <li>
-              click on any of the steps to have the synth on that track play at
-              that beat
-            </li>
-          </ul>
-
-          <h2>synths</h2>
-          <ul className="list-disc align-left">
-            <li>
-              T1 (kick): <span className="text-zinc-100">a membrane synth</span>
-            </li>
-            <li>
-              T2 (snare): <span className="text-zinc-100">a noise synth</span>
-            </li>
-            <li>
-              T3 (snare): <span className="text-zinc-100">a noise synth</span>
-            </li>
-            <li>
-              T4 (hihat): <span className="text-zinc-100">a metal synth</span>
-            </li>
-            <li>
-              T5 (hihat): <span className="text-zinc-100">a metal synth</span>
-            </li>
-            <li>
-              T6 (low tom):{" "}
-              <span className="text-zinc-100">a membrane synth</span>
-            </li>
-          </ul>
-          <p>
-            note:{" "}
-            <span className="text-zinc-100">
-              when you're both in the same location, only have one person
-              playing audio at a time (or not if you want lol)
-            </span>
-          </p>
-        </div>
-      </div>
-    </>
+    </div>
   );
 }
-
-export default App;

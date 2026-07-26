@@ -1,15 +1,10 @@
 import { useEffect, useRef } from "react";
-import { AudioEngine } from "../../audio/AudioEngine";
+import { useAudioEngine } from "../../hooks/useAudioEngine";
+import { useIsPlaying } from "../../hooks/useSynthState";
 
-interface FFTVisualizerProps {
-  engineRef: React.RefObject<AudioEngine | null>;
-  isPlaying: boolean;
-}
-
-export default function FFTVisualizer({
-  engineRef,
-  isPlaying,
-}: FFTVisualizerProps) {
+export default function FFTVisualizer() {
+  const engine = useAudioEngine();
+  const isPlaying = useIsPlaying();
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -22,7 +17,7 @@ export default function FFTVisualizer({
     let frameId: number;
 
     const draw = () => {
-      const data = engineRef.current?.getFFTData();
+      const data = engine.getFFTData();
 
       if (!data) {
         frameId = requestAnimationFrame(draw);
@@ -60,7 +55,7 @@ export default function FFTVisualizer({
     frameId = requestAnimationFrame(draw);
 
     return () => cancelAnimationFrame(frameId);
-  }, [isPlaying, engineRef]);
+  }, [isPlaying, engine]);
 
   return <canvas ref={canvasRef} className="w-full h-full block" />;
 }
