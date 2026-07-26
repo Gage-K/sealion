@@ -1,6 +1,18 @@
 import { DRUM_SYNTH_CONFIG } from "../config/drumSynthConfig";
 
 /**
+ * Expand a list of 1-based active step numbers into a 16-slot boolean row,
+ * used to seed a track's default pattern.
+ */
+function patternToSteps(pattern: number[] = []): boolean[] {
+  const row = Array<boolean>(16).fill(false);
+  for (const step of pattern) {
+    if (step >= 1 && step <= 16) row[step - 1] = true;
+  }
+  return row;
+}
+
+/**
  * Last Write Wins Register (LWW)
  * If received timestampe is less than local timestamp, register does not change
  * If received timestamp is greater than local timestamp, register overwrites local value with received value. Also, store the received timestamp and an identifier unique to the peer who wrote the value (their ID)
@@ -228,19 +240,31 @@ class GlobalSettingsCRDT {
   }
 }
 
+const FALLBACK_TRACK_SETTINGS: TrackSettings = {
+  envelope: { attack: 0.1, decay: 0.1, sustain: 0.1, release: 0.1 },
+  volume: 0.0,
+  muted: false,
+};
+
 class TrackSettingsCRDT {
   readonly id: string;
   readonly trackIndex: number;
   #data: LWWMap<TrackSettings>;
+  // Per-track defaults (e.g. the kit's tuned envelope). Kept virtual — never
+  // written into the CRDT — so peers with real edits always win on merge and
+  // two fresh clients agree without any timestamped writes.
+  readonly #defaults: TrackSettings;
 
   constructor(
     id: string,
     trackIndex: number,
-    state: State<TrackSettings> = {}
+    state: State<TrackSettings> = {},
+    defaults: TrackSettings = FALLBACK_TRACK_SETTINGS
   ) {
     this.id = id;
     this.trackIndex = trackIndex;
     this.#data = new LWWMap(id, state);
+    this.#defaults = defaults;
   }
 
   // provides a single source of truth for the key of track settings
@@ -250,19 +274,7 @@ class TrackSettingsCRDT {
 
   get value(): TrackSettings {
     const settings = this.#data.get(TrackSettingsCRDT.settingsKey());
-
-    return (
-      settings ?? {
-        envelope: {
-          attack: 0.1,
-          decay: 0.1,
-          sustain: 0.1,
-          release: 0.1,
-        },
-        volume: 0.0,
-        muted: false,
-      }
-    );
+    return settings ?? this.#defaults;
   }
 
   get state() {
@@ -322,11 +334,21 @@ class SequencerCRDT {
   readonly id: string;
   readonly trackIndex: number;
   #data: LWWMap<Step>;
+  // Virtual default pattern (e.g. a seeded groove). Like the settings default,
+  // it's never written into the CRDT, so it only shows through for steps no one
+  // has touched — real edits and merges always take precedence.
+  readonly #defaults: boolean[];
 
-  constructor(id: string, trackIndex: number, state: State<Step> = {}) {
+  constructor(
+    id: string,
+    trackIndex: number,
+    state: State<Step> = {},
+    defaults: boolean[] = []
+  ) {
     this.id = id;
     this.trackIndex = trackIndex;
     this.#data = new LWWMap(id, state);
+    this.#defaults = defaults;
   }
 
   static stepKey(stepIndex: number) {
@@ -364,7 +386,7 @@ class SequencerCRDT {
     const key = SequencerCRDT.stepKey(stepIndex);
     const register = this.#data.get(key);
 
-    return register ?? [false];
+    return register ?? [this.#defaults[stepIndex] ?? false];
   }
 
   toggleStep(stepIndex: number) {
@@ -440,12 +462,18 @@ export class DrumSynthCRDT {
         settings: new TrackSettingsCRDT(
           id,
           index,
-          state?.tracks?.[index]?.settings || {}
+          state?.tracks?.[index]?.settings || {},
+          {
+            envelope: DRUM_SYNTH_CONFIG[index].envelope,
+            volume: 0.0,
+            muted: false,
+          }
         ),
         sequence: new SequencerCRDT(
           id,
           index,
-          state?.tracks?.[index]?.sequence || {}
+          state?.tracks?.[index]?.sequence || {},
+          patternToSteps(DRUM_SYNTH_CONFIG[index].pattern)
         ),
       };
     });

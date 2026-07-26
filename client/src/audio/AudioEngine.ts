@@ -53,8 +53,8 @@ export class AudioEngine {
     this.fft = new Tone.FFT(256);
     this.volumeNode.connect(this.fft);
 
-    this.gainNodes = DRUM_SYNTH_CONFIG.map(() => {
-      const gain = new Tone.Gain();
+    this.gainNodes = DRUM_SYNTH_CONFIG.map((config) => {
+      const gain = new Tone.Gain(config.gain);
       gain.connect(this.volumeNode!);
       return gain;
     });
@@ -70,17 +70,18 @@ export class AudioEngine {
 
       switch (config.type) {
         case "membrane":
-          return new Tone.MembraneSynth({ envelope: envelopeOpts }).connect(
-            this.gainNodes[i],
-          );
+          return new Tone.MembraneSynth({
+            ...config.membrane,
+            envelope: envelopeOpts,
+          }).connect(this.gainNodes[i]);
         case "metal":
           return new Tone.MetalSynth({
+            ...config.metal,
             envelope: envelopeOpts,
-            ...config.synthOptions,
           }).connect(this.gainNodes[i]);
         case "noise":
           return new Tone.NoiseSynth({
-            noise: config.synthOptions?.noise,
+            noise: config.noise,
             envelope: envelopeOpts,
           }).connect(this.gainNodes[i]);
         default:
