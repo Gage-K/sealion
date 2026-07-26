@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { AudioEngine } from "../../audio/AudioEngine";
 
 interface FFTVisualizerProps {
-  engineRef: React.RefObject<AudioEngine>;
+  engineRef: React.RefObject<AudioEngine | null>;
   isPlaying: boolean;
 }
 

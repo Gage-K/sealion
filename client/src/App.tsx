@@ -1,9 +1,8 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef } from "react";
 import { ArrowsClockwise } from "phosphor-react";
 import Sketch from "./pages/sketch";
 
 // lib
-import type { Step } from "./types/crdt";
 import { dotStyles } from "./lib/seqStyles";
 import { DRUM_SYNTH_CONFIG } from "./config/drumSynthConfig";
 
@@ -26,10 +25,6 @@ const SKIP_RENDER = true;
 function App() {
   const drumSynthCRDT = useCRDT();
   const hasInit = useRef(false);
-
-  const sequenceData: Step[][] = useMemo(() => {
-    return drumSynthCRDT.getAllTrackSequences();
-  }, [drumSynthCRDT]);
 
   useEffect(() => {
     if (hasInit.current) return;
