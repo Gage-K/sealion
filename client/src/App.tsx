@@ -1,36 +1,43 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { PlayIcon, PauseIcon } from "@phosphor-icons/react";
-import type { EffectName, EffectsState, LfoState } from "../types/synth";
-import { defaultEffects, defaultLfo } from "../types/synth";
-import Button from "../components/core/NewButton";
-import GlobalControls from "../components/complex/GlobalControls";
-import TrackPanel from "../components/complex/TrackPanel";
-import EffectPanel from "../components/complex/EffectPanel";
-import LfoPanel from "../components/complex/LfoPanel";
-import Keyboard from "../components/complex/NewKeyboard";
-import StepSequencer from "../components/complex/StepSequencer";
-import FFTVisualizer from "../components/complex/FFTVisualizer";
-import { useAudioEngine } from "../hooks/useAudioEngine";
-import { useCRDT } from "../hooks/useCRDT";
-import { DRUM_SYNTH_CONFIG } from "../config/drumSynthConfig";
+import type { EffectName, EffectsState, LfoState } from "./types/synth";
+import { defaultEffects, defaultLfo } from "./types/synth";
+import Button from "./components/core/NewButton";
+import GlobalControls from "./components/complex/GlobalControls";
+import TrackPanel from "./components/complex/TrackPanel";
+import EffectPanel from "./components/complex/EffectPanel";
+import LfoPanel from "./components/complex/LfoPanel";
+import Keyboard from "./components/complex/NewKeyboard";
+import StepSequencer from "./components/complex/StepSequencer";
+import FFTVisualizer from "./components/complex/FFTVisualizer";
+import { DRUM_SYNTH_CONFIG } from "./config/drumSynthConfig";
+import {
+  useBpm,
+  useSwing,
+  useVolume,
+  useIsPlaying,
+  useCurrentStep,
+  useEnvelopes,
+  useSequenceGrid,
+} from "./hooks/useSynthState";
+import { useAudioActions } from "./hooks/useAudioActions";
 
-export default function Sketch() {
-  const crdt = useCRDT();
+export default function App() {
+  const isPlaying = useIsPlaying();
+  const currentStep = useCurrentStep();
+  const bpm = useBpm();
+  const swing = useSwing();
+  const volume = useVolume();
+  const envelopes = useEnvelopes();
+  const sequenceGrid = useSequenceGrid();
   const {
-    engineRef,
-    isPlaying,
-    currentStep,
-    bpm,
-    swing,
-    volume,
-    envelopes,
     togglePlay,
     handleBPMChange,
     handleSwingChange,
     handleVolumeChange,
     handleEnvelopeChange,
     handleSequenceToggle,
-  } = useAudioEngine();
+  } = useAudioActions();
 
   const [pan, setPan] = useState(0);
   const [selectedTrack, setSelectedTrack] = useState(0);
@@ -53,29 +60,13 @@ export default function Sketch() {
   };
 
   const numTracks = DRUM_SYNTH_CONFIG.length;
-  const [sequenceGrid, setSequenceGrid] = useState<boolean[][]>(() =>
-    crdt.tracks.map((t) => t.sequence.fullSequence)
-  );
-
-  useEffect(() => {
-    const unsubs = crdt.tracks.map((track, i) =>
-      track.sequence.subscribe(() => {
-        setSequenceGrid((prev) => {
-          const next = [...prev];
-          next[i] = crdt.tracks[i].sequence.fullSequence;
-          return next;
-        });
-      })
-    );
-    return () => unsubs.forEach((u) => u());
-  }, [crdt]);
 
   return (
     <div className="bg-zinc-900 h-screen w-screen text-zinc-100 grid place-items-center text-sm">
       <div className="border border-zinc-600 rounded-sm p-4 grid grid-cols-[repeat(16,minmax(1.5rem,1fr))] gap-4 items-start">
         <div className="col-span-8 row-start-1 row-span-1 border border-cyan-400">
           <div className="bg-cyan-400 m-1">
-            <FFTVisualizer engineRef={engineRef} isPlaying={isPlaying} />
+            <FFTVisualizer />
 
           </div>
         </div>
