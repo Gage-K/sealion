@@ -1,4 +1,6 @@
 import { DRUM_SYNTH_CONFIG } from "../config/drumSynthConfig";
+import { DEFAULT_TRACK_EFFECTS } from "./effects";
+import type { EffectKey, EffectValue, TrackEffectsMap } from "./effects";
 
 /**
  * Expand a list of 1-based active step numbers into a 16-slot boolean row,
@@ -144,10 +146,24 @@ export type Envelope = {
   sustain: number;
   release: number;
 };
-export type TrackSettings = {
-  envelope: Envelope;
+export type Mixer = {
   volume: number;
   muted: boolean;
+};
+
+/**
+ * Wire shape for one track's settings. `core` holds the envelope and mixer
+ * under separate keys, `fx` holds one register per effect.
+ *
+ * These are deliberately separate registers rather than one blob. Every setter
+ * writes `{ ...current, patch }`, and `current` falls back to the virtual
+ * defaults. A single blob means any write promotes every untouched default
+ * to a real timestamped value, and a peer's concurrent edit to an unrelated
+ * field loses the tie-break and is discarded.
+ */
+export type TrackSettingsState = {
+  core: State<Envelope | Mixer>;
+  fx: State<EffectValue>;
 };
 
 export type GlobalSettings = {
@@ -240,76 +256,116 @@ class GlobalSettingsCRDT {
   }
 }
 
-const FALLBACK_TRACK_SETTINGS: TrackSettings = {
-  envelope: { attack: 0.1, decay: 0.1, sustain: 0.1, release: 0.1 },
-  volume: 0.0,
-  muted: false,
+const FALLBACK_ENVELOPE: Envelope = {
+  attack: 0.1,
+  decay: 0.1,
+  sustain: 0.1,
+  release: 0.1,
 };
+
+const DEFAULT_MIXER: Mixer = { volume: 0.0, muted: false };
 
 class TrackSettingsCRDT {
   readonly id: string;
   readonly trackIndex: number;
-  #data: LWWMap<TrackSettings>;
-  // Per-track defaults (e.g. the kit's tuned envelope). Kept virtual — never
-  // written into the CRDT — so peers with real edits always win on merge and
-  // two fresh clients agree without any timestamped writes.
-  readonly #defaults: TrackSettings;
+  // Envelope and mixer live under separate keys so editing one never rewrites
+  // the other. See TrackSettingsState for why that matters on merge.
+  #data: LWWMap<Envelope | Mixer>;
+  // One register per effect, keyed by effect name, for the same reason as above
+  #fx: LWWMap<EffectValue>;
+  readonly #defaults: { envelope: Envelope; mixer: Mixer };
+  readonly #fxDefaults: TrackEffectsMap;
 
   constructor(
     id: string,
     trackIndex: number,
-    state: State<TrackSettings> = {},
-    defaults: TrackSettings = FALLBACK_TRACK_SETTINGS
+    state: Partial<TrackSettingsState> = {},
+    defaults: { envelope: Envelope; mixer: Mixer } = {
+      envelope: FALLBACK_ENVELOPE,
+      mixer: DEFAULT_MIXER,
+    },
+    fxDefaults: TrackEffectsMap = DEFAULT_TRACK_EFFECTS,
   ) {
     this.id = id;
     this.trackIndex = trackIndex;
-    this.#data = new LWWMap(id, state);
+    this.#data = new LWWMap(id, state.core ?? {});
+    this.#fx = new LWWMap(id, state.fx ?? {});
     this.#defaults = defaults;
+    this.#fxDefaults = fxDefaults;
   }
 
-  // provides a single source of truth for the key of track settings
-  static settingsKey() {
-    return "settings";
+  // Single source of truth for the register keys.
+  static envelopeKey() {
+    return "envelope";
   }
 
-  get value(): TrackSettings {
-    const settings = this.#data.get(TrackSettingsCRDT.settingsKey());
-    return settings ?? this.#defaults;
+  static mixerKey() {
+    return "mixer";
   }
 
-  get state() {
-    return this.#data.state;
+  get state(): TrackSettingsState {
+    return { core: this.#data.state, fx: this.#fx.state };
   }
 
-  get envelope() {
-    return this.value.envelope;
+  get envelope(): Envelope {
+    const stored = this.#data.get(TrackSettingsCRDT.envelopeKey()) as
+      | Envelope
+      | undefined;
+    return stored ?? this.#defaults.envelope;
   }
 
-  setSettings(settings: TrackSettings) {
-    const key = TrackSettingsCRDT.settingsKey();
-    this.#data.set(key, settings);
+  get mixer(): Mixer {
+    const stored = this.#data.get(TrackSettingsCRDT.mixerKey()) as
+      | Mixer
+      | undefined;
+    return stored ?? this.#defaults.mixer;
+  }
+
+  /**
+   * The LWWMap is keyed by effect name but stores the union of every effect's
+   * params, so this is the one place narrowing happens. Keeping LWWMap itself
+   * non-generic-over-a-record avoids rippling mapped types through State<T>,
+   * SequencerCRDT and GlobalSettingsCRDT.
+   */
+  getEffect<K extends EffectKey>(name: K): TrackEffectsMap[K] {
+    const stored = this.#fx.get(name) as TrackEffectsMap[K] | undefined;
+    return stored ?? this.#fxDefaults[name];
+  }
+
+  get effects(): TrackEffectsMap {
+    return {
+      delay: this.getEffect("delay"),
+      reverb: this.getEffect("reverb"),
+      chorus: this.getEffect("chorus"),
+      distortion: this.getEffect("distortion"),
+      filter: this.getEffect("filter"),
+      lfo: this.getEffect("lfo"),
+    };
   }
 
   setEnvelope(envelope: Envelope) {
-    const current = this.value;
-    this.setSettings({ ...current, envelope });
+    this.#data.set(TrackSettingsCRDT.envelopeKey(), envelope);
     this.notify();
   }
 
   setVolume(volume: number) {
-    const current = this.value;
-    this.setSettings({ ...current, volume });
+    this.#data.set(TrackSettingsCRDT.mixerKey(), { ...this.mixer, volume });
     this.notify();
   }
 
   setMuted(muted: boolean) {
-    const current = this.value;
-    this.setSettings({ ...current, muted });
+    this.#data.set(TrackSettingsCRDT.mixerKey(), { ...this.mixer, muted });
     this.notify();
   }
 
-  merge(state: State<TrackSettings>) {
-    this.#data.merge(state);
+  setEffect<K extends EffectKey>(name: K, patch: Partial<TrackEffectsMap[K]>) {
+    this.#fx.set(name, { ...this.getEffect(name), ...patch });
+    this.notify();
+  }
+
+  merge(state: Partial<TrackSettingsState>) {
+    this.#data.merge(state.core ?? {});
+    this.#fx.merge(state.fx ?? {});
     this.notify();
   }
 
@@ -343,7 +399,7 @@ class SequencerCRDT {
     id: string,
     trackIndex: number,
     state: State<Step> = {},
-    defaults: boolean[] = []
+    defaults: boolean[] = [],
   ) {
     this.id = id;
     this.trackIndex = trackIndex;
@@ -442,16 +498,20 @@ export class DrumSynthCRDT {
   private gridDirty = true;
   private envelopesSnapshot: Envelope[] = [];
   private envelopesDirty = true;
+  private effectsSnapshot: TrackEffectsMap[] = [];
+  private effectsDirty = true;
+  private mixersSnapshot: Mixer[] = [];
+  private mixersDirty = true;
 
   constructor(
     id: string,
     state?: {
       global?: State<GlobalSettings>;
       tracks?: Array<{
-        settings: State<TrackSettings>;
+        settings: Partial<TrackSettingsState>;
         sequence: State<Step>;
       }>;
-    }
+    },
   ) {
     this.id = id;
 
@@ -465,15 +525,14 @@ export class DrumSynthCRDT {
           state?.tracks?.[index]?.settings || {},
           {
             envelope: DRUM_SYNTH_CONFIG[index].envelope,
-            volume: 0.0,
-            muted: false,
-          }
+            mixer: { volume: 0.0, muted: false },
+          },
         ),
         sequence: new SequencerCRDT(
           id,
           index,
           state?.tracks?.[index]?.sequence || {},
-          patternToSteps(DRUM_SYNTH_CONFIG[index].pattern)
+          patternToSteps(DRUM_SYNTH_CONFIG[index].pattern),
         ),
       };
     });
@@ -484,7 +543,7 @@ export class DrumSynthCRDT {
   private setupSubscriptions() {
     // Global settings changes don't affect the cached array snapshots.
     this.unsubscribeFunctions.push(
-      this.globalSettings.subscribe(() => this.notify())
+      this.globalSettings.subscribe(() => this.notify()),
     );
 
     // Track changes invalidate the matching cached snapshot before notifying.
@@ -492,14 +551,16 @@ export class DrumSynthCRDT {
       this.unsubscribeFunctions.push(
         track.settings.subscribe(() => {
           this.envelopesDirty = true;
+          this.effectsDirty = true;
+          this.mixersDirty = true;
           this.notify();
-        })
+        }),
       );
       this.unsubscribeFunctions.push(
         track.sequence.subscribe(() => {
           this.gridDirty = true;
           this.notify();
-        })
+        }),
       );
     });
   }
@@ -541,6 +602,24 @@ export class DrumSynthCRDT {
     return this.gridSnapshot;
   };
 
+  getTrackEffects = (): TrackEffectsMap[] => {
+    if (this.effectsDirty) {
+      this.effectsSnapshot = this.tracks.map((t) => t.settings.effects);
+      this.effectsDirty = false;
+    }
+    return this.effectsSnapshot;
+  };
+
+  getTrackMixers = (): Mixer[] => {
+    if (this.mixersDirty) {
+      this.mixersSnapshot = this.tracks.map((t) => t.settings.mixer);
+      this.mixersDirty = false;
+    }
+    return this.mixersSnapshot;
+  };
+
+  getPan = () => this.globalSettings.pan;
+
   // Clean up subscriptions
   destroy() {
     this.unsubscribeFunctions.forEach((unsubscribe) => unsubscribe());
@@ -561,7 +640,9 @@ export class DrumSynthCRDT {
   // Convenience methods for common operations
   getTrack(trackIndex: number) {
     if (trackIndex < 0 || trackIndex >= DRUM_SYNTH_CONFIG.length) {
-      throw new Error(`Track index ${trackIndex} out of range (0-${DRUM_SYNTH_CONFIG.length - 1})`);
+      throw new Error(
+        `Track index ${trackIndex} out of range (0-${DRUM_SYNTH_CONFIG.length - 1})`,
+      );
     }
     return this.tracks[trackIndex];
   }
@@ -572,12 +653,12 @@ export class DrumSynthCRDT {
 
   getAllTrackSequences() {
     return this.tracks.map((_, trackIndex) =>
-      this.getTrackSequence(trackIndex)
+      this.getTrackSequence(trackIndex),
     );
   }
 
-  getTrackSettings(trackIndex: number): TrackSettings {
-    return this.getTrack(trackIndex).settings.value;
+  getTrackMixer(trackIndex: number): Mixer {
+    return this.getTrack(trackIndex).settings.mixer;
   }
 
   merge(state: DrumSynthCRDT["state"]) {
