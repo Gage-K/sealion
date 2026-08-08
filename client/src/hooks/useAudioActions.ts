@@ -1,13 +1,18 @@
 import { useCallback } from "react";
 import type { Envelope } from "../types/crdt";
+import type { EffectKey, TrackEffectsMap } from "../types/effects";
 import { useCRDT } from "./useCRDT";
 import { useWebSocket } from "./useWebSocket";
 import { useAudioEngine } from "./useAudioEngine";
 
 /**
  * Write actions for the synth. Collaborative changes mutate the CRDT and
- * broadcast; the engine reacts to those CRDT changes on its own. Volume and
- * playback are engine-local and don't touch the CRDT.
+ * broadcast; the engine reacts to those CRDT changes on its own. Playback and
+ * *master* volume are engine-local and don't touch the CRDT.
+ *
+ * Note the deliberate split between the two volume actions below: master volume
+ * is a per-listener monitor level, so each peer sets their own. Per-track volume
+ * is a musical decision about the mix, so it syncs like any other track setting.
  */
 export function useAudioActions() {
   const crdt = useCRDT();
@@ -61,6 +66,52 @@ export function useAudioActions() {
     [crdt, sendUpdate]
   );
 
+  const handlePanChange = useCallback(
+    (value: number) => {
+      crdt.globalSettings.setPan(value);
+      sendUpdate(crdt);
+    },
+    [crdt, sendUpdate]
+  );
+
+  const handleEffectChange = useCallback(
+    <K extends EffectKey>(
+      trackIndex: number,
+      name: K,
+      patch: Partial<TrackEffectsMap[K]>
+    ) => {
+      crdt.tracks[trackIndex].settings.setEffect(name, patch);
+      sendUpdate(crdt);
+    },
+    [crdt, sendUpdate]
+  );
+
+  const handleEffectToggle = useCallback(
+    (trackIndex: number, name: EffectKey) => {
+      const settings = crdt.tracks[trackIndex].settings;
+      settings.setEffect(name, { enabled: !settings.getEffect(name).enabled });
+      sendUpdate(crdt);
+    },
+    [crdt, sendUpdate]
+  );
+
+  const handleTrackVolumeChange = useCallback(
+    (trackIndex: number, db: number) => {
+      crdt.tracks[trackIndex].settings.setVolume(db);
+      sendUpdate(crdt);
+    },
+    [crdt, sendUpdate]
+  );
+
+  const handleTrackMuteToggle = useCallback(
+    (trackIndex: number) => {
+      const settings = crdt.tracks[trackIndex].settings;
+      settings.setMuted(!settings.mixer.muted);
+      sendUpdate(crdt);
+    },
+    [crdt, sendUpdate]
+  );
+
   return {
     togglePlay,
     handleVolumeChange,
@@ -68,5 +119,10 @@ export function useAudioActions() {
     handleSwingChange,
     handleEnvelopeChange,
     handleSequenceToggle,
+    handlePanChange,
+    handleEffectChange,
+    handleEffectToggle,
+    handleTrackVolumeChange,
+    handleTrackMuteToggle,
   };
 }

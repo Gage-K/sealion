@@ -1,4 +1,8 @@
-import RangeControl, { formatVolume, formatPan, formatPercent } from "../core/RangeControl";
+import RangeControl, {
+  formatVolume,
+  formatPan,
+  formatPercent,
+} from "../core/RangeControl";
 
 export default function GlobalControls({
   vol,
@@ -22,9 +26,29 @@ export default function GlobalControls({
   return (
     <div className="grid grid-cols-[1fr] gap-y-2">
       <span className="text-zinc-500 text-xs">global</span>
-      <RangeControl label="vol" value={vol} formatValue={formatVolume} onChange={onChangeVol} min={-12} max={8} />
-      <RangeControl label="pan" value={pan} min={-50} max={50} onChange={onChangePan} formatValue={formatPan} />
-      <RangeControl label="bpm" value={bpm} onChange={onChangeBpm} min={60} max={240} />
+      <RangeControl
+        label="vol"
+        value={vol}
+        formatValue={formatVolume}
+        onChange={onChangeVol}
+        min={-12}
+        max={8}
+      />
+      <RangeControl
+        label="pan"
+        value={Math.round(pan * 50)}
+        onChange={(v) => onChangePan(v / 50)}
+        min={-50}
+        max={50}
+        formatValue={formatPan}
+      />
+      <RangeControl
+        label="bpm"
+        value={bpm}
+        onChange={onChangeBpm}
+        min={60}
+        max={240}
+      />
       <RangeControl
         label="swg"
         value={Math.round(swing * 100)}

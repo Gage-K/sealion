@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
-import type { Envelope } from "../types/crdt";
+import type { Envelope, Mixer } from "../types/crdt";
+import type { TrackEffectsMap } from "../types/effects";
 import { useCRDT } from "./useCRDT";
 import { useAudioEngine } from "./useAudioEngine";
 
@@ -48,4 +49,19 @@ export function useEnvelopes(): Envelope[] {
 export function useSequenceGrid(): boolean[][] {
   const crdt = useCRDT();
   return useSyncExternalStore(crdt.subscribe, crdt.getSequenceGrid);
+}
+
+export function usePan(): number {
+  const crdt = useCRDT();
+  return useSyncExternalStore(crdt.subscribe, crdt.getPan);
+}
+
+export function useTrackEffects(): TrackEffectsMap[] {
+  const crdt = useCRDT();
+  return useSyncExternalStore(crdt.subscribe, crdt.getTrackEffects);
+}
+
+export function useTrackMixers(): Mixer[] {
+  const crdt = useCRDT();
+  return useSyncExternalStore(crdt.subscribe, crdt.getTrackMixers);
 }

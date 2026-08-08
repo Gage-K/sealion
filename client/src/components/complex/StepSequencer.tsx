@@ -1,29 +1,34 @@
-import { useState } from "react";
+import { memo, useCallback, useState } from "react";
 
-function StepButton({
+const StepButton = memo(function StepButton({
   label,
+  row,
+  col,
   active,
   current,
   onToggle,
 }: {
   label: string;
+  row: number;
+  col: number;
   active: boolean;
   current?: boolean;
-  onToggle: () => void;
+  onToggle: (row: number, col: number) => void;
 }) {
   return (
     <button
-      className={`aspect-square cursor-pointer rounded-xs border ${active
-        ? "border-zinc-200 shadow-[inset_0_0_0_3px_theme(--color-zinc-900),inset_0_0_0_20px_theme(--color-zinc-200)]"
-        : "border-zinc-600"
-        } ${current ? "ring-1 ring-amber-500" : ""}`}
-      onClick={onToggle}
+      className="step-pushable"
+      onClick={() => onToggle(row, col)}
       aria-pressed={active}
+      data-current={current ? "true" : undefined}
     >
+      <span className="step-shadow" aria-hidden="true" />
+      <span className="step-edge" aria-hidden="true" />
+      <span className="step-face" aria-hidden="true" />
       <span className="sr-only">{label}</span>
     </button>
   );
-}
+});
 
 export default function StepSequencer({
   rows = 4,
@@ -39,27 +44,38 @@ export default function StepSequencer({
   onToggle?: (row: number, col: number) => void;
 }) {
   const [internalSteps, setInternalSteps] = useState<boolean[][]>(
-    Array.from({ length: rows }, () => Array(cols).fill(false))
+    Array.from({ length: rows }, () => Array(cols).fill(false)),
   );
 
   const steps = controlledSteps ?? internalSteps;
 
-  function toggleStep(row: number, col: number) {
-    if (onToggle) {
-      onToggle(row, col);
-    } else {
-      setInternalSteps((prev) =>
-        prev.map((r, ri) =>
-          ri === row ? r.map((v, ci) => (ci === col ? !v : v)) : r
-        )
-      );
-    }
-  }
+  const toggleStep = useCallback(
+    (row: number, col: number) => {
+      if (onToggle) {
+        onToggle(row, col);
+      } else {
+        setInternalSteps((prev) =>
+          prev.map((r, ri) =>
+            ri === row ? r.map((v, ci) => (ci === col ? !v : v)) : r,
+          ),
+        );
+      }
+    },
+    [onToggle],
+  );
 
   return (
-    <div className="col-span-16 grid grid-cols-subgrid gap-y-4" role="group" aria-label="Step sequencer">
+    <div
+      className="col-span-16 grid grid-cols-subgrid gap-y-2"
+      role="group"
+      aria-label="Step sequencer"
+    >
       {Array.from({ length: cols }, (_, i) => (
-        <span key={i} aria-hidden="true" className="text-xs text-center text-zinc-500">
+        <span
+          key={i}
+          aria-hidden="true"
+          className="text-xs text-center text-zinc-500"
+        >
           {i + 1}
         </span>
       ))}
@@ -68,11 +84,13 @@ export default function StepSequencer({
           <StepButton
             key={`${ri}-${ci}`}
             label={`Row ${ri + 1} Step ${ci + 1}`}
+            row={ri}
+            col={ci}
             active={active}
             current={currentStep === ci}
-            onToggle={() => toggleStep(ri, ci)}
+            onToggle={toggleStep}
           />
-        ))
+        )),
       )}
     </div>
   );
