@@ -1,5 +1,7 @@
 import * as Tone from "tone";
 import { DRUM_SYNTH_CONFIG, playDrumSynth } from "../config/drumSynthConfig";
+import { TrackChannel } from "./TrackChannel";
+import { clamp } from "./units";
 import type { DrumSynthCRDT } from "../types/crdt";
 import type { Envelope } from "../types/crdt";
 
@@ -11,7 +13,8 @@ type DrumSynth =
 
 export class AudioEngine {
   private synths: DrumSynth[] = [];
-  private gainNodes: Tone.Gain[] = [];
+  private channels: TrackChannel[] = [];
+  private panner: Tone.Panner | null = null;
   private volumeNode: Tone.Volume | null = null;
   private fft: Tone.FFT | null = null;
   private transportEventId: number | null = null;
@@ -53,11 +56,13 @@ export class AudioEngine {
     this.fft = new Tone.FFT(256);
     this.volumeNode.connect(this.fft);
 
-    this.gainNodes = DRUM_SYNTH_CONFIG.map((config) => {
-      const gain = new Tone.Gain(config.gain);
-      gain.connect(this.volumeNode!);
-      return gain;
-    });
+    this.panner = new Tone.Panner(
+      clamp(crdt.globalSettings.pan, -1, 1),
+    ).connect(this.volumeNode);
+
+    this.channels = DRUM_SYNTH_CONFIG.map(
+      (config) => new TrackChannel(config.gain, this.panner!),
+    );
 
     this.synths = DRUM_SYNTH_CONFIG.map((config, i) => {
       const envelope = crdt.tracks[i].settings.envelope;
@@ -73,19 +78,19 @@ export class AudioEngine {
           return new Tone.MembraneSynth({
             ...config.membrane,
             envelope: envelopeOpts,
-          }).connect(this.gainNodes[i]);
+          }).connect(this.channels[i].input);
         case "metal":
           return new Tone.MetalSynth({
             ...config.metal,
             envelope: envelopeOpts,
-          }).connect(this.gainNodes[i]);
+          }).connect(this.channels[i].input);
         case "noise":
           return new Tone.NoiseSynth({
             noise: config.noise,
             envelope: envelopeOpts,
-          }).connect(this.gainNodes[i]);
+          }).connect(this.channels[i].input);
         default:
-          return new Tone.Synth().connect(this.gainNodes[i]);
+          return new Tone.Synth().connect(this.channels[i].input);
       }
     });
 
@@ -102,14 +107,31 @@ export class AudioEngine {
       crdt.globalSettings.subscribe(() => {
         this.setBPM(crdt.globalSettings.bpm);
         this.setSwing(crdt.globalSettings.swing);
+        this.setPan(crdt.globalSettings.pan);
       }),
     );
     crdt.tracks.forEach((track, i) => {
       this.crdtUnsubs.push(
         track.settings.subscribe(() => {
-          this.updateEnvelope(i, track.settings.envelope);
+          try {
+            this.updateEnvelope(i, track.settings.envelope);
+            this.channels[i]?.update(
+              track.settings.effects,
+              track.settings.mixer,
+            );
+          } catch (err) {
+            console.error(`[AudioEngine] track ${i} update failed`, err);
+          }
         }),
       );
+    });
+
+    crdt.tracks.forEach((track, i) => {
+      try {
+        this.channels[i].update(track.settings.effects, track.settings.mixer);
+      } catch (err) {
+        console.error(`[AudioEngine] track ${i} initial apply failed`, err);
+      }
     });
   }
 
@@ -170,6 +192,11 @@ export class AudioEngine {
     Tone.getTransport().swing = swing;
   }
 
+  setPan(pan: number) {
+    if (!this.panner) return;
+    this.panner.pan.rampTo(clamp(Number.isFinite(pan) ? pan : 0, -1, 1), 0.02);
+  }
+
   setVolume(db: number) {
     const clamped = Math.min(Math.max(db, -12), 8);
     this.volume = clamped;
@@ -209,12 +236,22 @@ export class AudioEngine {
     this.synths.forEach((s) => s.dispose());
     this.synths = [];
 
-    this.gainNodes.forEach((g) => g.dispose());
-    this.gainNodes = [];
+    this.channels.forEach((c) => c.dispose());
+    this.channels = [];
+
+    if (this.panner) {
+      this.panner.dispose();
+      this.panner = null;
+    }
 
     if (this.volumeNode) {
       this.volumeNode.dispose();
       this.volumeNode = null;
+    }
+
+    if (this.fft) {
+      this.fft.dispose();
+      this.fft = null;
     }
 
     this.crdt = null;
