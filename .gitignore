@@ -28,5 +28,8 @@ dist-ssr
 notes.md
 .env
 
+# Local deploy runbook (infra notes, kept out of the repo)
+docs/deploy.md
+
 # Claude Code (local dev config, personal settings)
 .claude/
