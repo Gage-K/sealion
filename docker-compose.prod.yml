@@ -1,0 +1,40 @@
+# Production deploy for Sealion. Sealion is an independent tenant behind the shared
+# standalone Caddy edge proxy (the edge-proxy project): these containers join the
+# external "web" network and Caddy routes sealion.pinniped.app to them by hostname
+# (/ws -> sealion-sync, everything else -> sealion-web). No front door lives here.
+#
+# Before first run:
+#   docker network create web      # once, shared with the edge proxy
+#   echo "SEALION_HOST=sealion.pinniped.app" > .env   # your subdomain
+#
+# Then:
+#   docker compose -f docker-compose.prod.yml up -d --build
+services:
+  # Static React client, served by an internal nginx on :80.
+  sealion-web:
+    build:
+      context: .
+      dockerfile: client/Dockerfile.prod
+      args:
+        # Baked into the bundle at build time — must be the public wss:// endpoint.
+        VITE_WS_URL: wss://${SEALION_HOST}/ws
+    container_name: sealion-web
+    restart: always
+    networks:
+      - web
+
+  # WebSocket relay on :8080.
+  sealion-sync:
+    build:
+      context: .
+      dockerfile: server/Dockerfile.prod
+    container_name: sealion-sync
+    restart: always
+    environment:
+      PORT: 8080
+    networks:
+      - web
+
+networks:
+  web:
+    external: true

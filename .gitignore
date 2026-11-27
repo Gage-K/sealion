@@ -27,3 +27,6 @@ dist-ssr
 # Misc
 notes.md
 .env
+
+# Local deploy runbook (infra notes, kept out of the repo)
+docs/deploy.md

@@ -1,0 +1,22 @@
+# Build the static client, then serve it from nginx.
+# Context is the repo root (like bibliotab) so the pnpm workspace + lockfile are available.
+FROM node:22-alpine AS build
+RUN corepack enable
+WORKDIR /app
+
+# Install deps against the workspace lockfile (only the client's subtree).
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY client/package.json ./client/
+COPY server/package.json ./server/
+RUN pnpm install --frozen-lockfile --filter @sealion/client
+
+# Build. VITE_WS_URL is baked in at build time — it must point at the public wss:// endpoint.
+COPY client/ ./client/
+ARG VITE_WS_URL
+ENV VITE_WS_URL=$VITE_WS_URL
+RUN pnpm --filter @sealion/client build
+
+# Serve the static bundle.
+FROM nginx:alpine
+COPY client/nginx.spa.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/client/dist /usr/share/nginx/html
