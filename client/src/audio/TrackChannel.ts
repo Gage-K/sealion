@@ -2,20 +2,14 @@ import * as Tone from "tone";
 import { EFFECT_ORDER, clampEffect } from "../types/effects";
 import type { EffectName, TrackEffectsMap } from "../types/effects";
 import type { Mixer } from "../types/crdt";
+import { AUDIO_EFFECT_SPECS } from "./effectSpecs";
+import type { EffectNode } from "./effectSpecs";
 import { clamp } from "./units";
 
 const RAMP = 0.02;
 
 const MIN_DB = -60;
 const MAX_DB = 12;
-
-type FxNodeMap = {
-  filter: Tone.Filter;
-  distortion: Tone.Distortion;
-  chorus: Tone.Chorus;
-  delay: Tone.FeedbackDelay;
-  reverb: Tone.Freeverb;
-};
 
 type InsertParams = Pick<TrackEffectsMap, EffectName>;
 
@@ -27,7 +21,7 @@ export class TrackChannel {
   readonly input: Tone.Gain;
   readonly out: Tone.Channel;
 
-  #fx = new Map<EffectName, FxNodeMap[EffectName]>();
+  #fx = new Map<EffectName, EffectNode>();
   #applied: Partial<TrackEffectsMap> = {};
   #appliedMixer: Mixer | null = null;
   #topology = "";
@@ -91,50 +85,7 @@ export class TrackChannel {
    */
   #ensure<K extends EffectName>(name: K, p: TrackEffectsMap[K]) {
     if (this.#fx.has(name)) return;
-
-    let node: FxNodeMap[EffectName];
-    switch (name) {
-      case "filter": {
-        const f = p as TrackEffectsMap["filter"];
-        node = new Tone.Filter({ frequency: f.cutoff, Q: f.q, type: f.type });
-        break;
-      }
-      case "distortion": {
-        const d = p as TrackEffectsMap["distortion"];
-        node = new Tone.Distortion({ distortion: d.amount, wet: d.wet });
-        break;
-      }
-      case "chorus": {
-        const c = p as TrackEffectsMap["chorus"];
-        node = new Tone.Chorus({
-          frequency: c.frequency,
-          depth: c.depth,
-          wet: c.wet,
-        }).start();
-        break;
-      }
-      case "delay": {
-        const d = p as TrackEffectsMap["delay"];
-        node = new Tone.FeedbackDelay({
-          delayTime: d.time,
-          feedback: d.feedback,
-          wet: d.wet,
-          maxDelay: 1,
-        });
-        break;
-      }
-      case "reverb": {
-        const r = p as TrackEffectsMap["reverb"];
-        node = new Tone.Freeverb({
-          roomSize: r.roomSize,
-          dampening: r.dampening,
-          wet: r.wet,
-        });
-        break;
-      }
-    }
-
-    this.#fx.set(name, node);
+    this.#fx.set(name, AUDIO_EFFECT_SPECS[name].create(p));
     this.#applied[name] = p;
   }
 
@@ -142,53 +93,11 @@ export class TrackChannel {
     const prev = this.#applied[name];
     if (prev === next) return;
 
-    switch (name) {
-      case "filter": {
-        const n = next as TrackEffectsMap["filter"];
-        const o = prev as TrackEffectsMap["filter"] | undefined;
-        const node = this.#fx.get("filter") as Tone.Filter;
-        if (o?.cutoff !== n.cutoff) node.frequency.rampTo(n.cutoff, RAMP);
-        if (o?.q !== n.q) node.Q.rampTo(n.q, RAMP);
-        if (o?.type !== n.type) node.type = n.type;
-        break;
-      }
-      case "distortion": {
-        const n = next as TrackEffectsMap["distortion"];
-        const o = prev as TrackEffectsMap["distortion"] | undefined;
-        const node = this.#fx.get("distortion") as Tone.Distortion;
-        if (o?.amount !== n.amount) node.distortion = n.amount;
-        if (o?.wet !== n.wet) node.wet.rampTo(n.wet, RAMP);
-        break;
-      }
-      case "chorus": {
-        const n = next as TrackEffectsMap["chorus"];
-        const o = prev as TrackEffectsMap["chorus"] | undefined;
-        const node = this.#fx.get("chorus") as Tone.Chorus;
-        if (o?.frequency !== n.frequency)
-          node.frequency.rampTo(n.frequency, RAMP);
-        if (o?.depth !== n.depth) node.depth = n.depth;
-        if (o?.wet !== n.wet) node.wet.rampTo(n.wet, RAMP);
-        break;
-      }
-      case "delay": {
-        const n = next as TrackEffectsMap["delay"];
-        const o = prev as TrackEffectsMap["delay"] | undefined;
-        const node = this.#fx.get("delay") as Tone.FeedbackDelay;
-        if (o?.time !== n.time) node.delayTime.rampTo(n.time, RAMP);
-        if (o?.feedback !== n.feedback) node.feedback.rampTo(n.feedback, RAMP);
-        if (o?.wet !== n.wet) node.wet.rampTo(n.wet, RAMP);
-        break;
-      }
-      case "reverb": {
-        const n = next as TrackEffectsMap["reverb"];
-        const o = prev as TrackEffectsMap["reverb"] | undefined;
-        const node = this.#fx.get("reverb") as Tone.Freeverb;
-        if (o?.roomSize !== n.roomSize) node.roomSize.rampTo(n.roomSize, RAMP);
-        if (o?.dampening !== n.dampening) node.dampening = n.dampening;
-        if (o?.wet !== n.wet) node.wet.rampTo(n.wet, RAMP);
-        break;
-      }
-    }
+    const node = this.#fx.get(name);
+    if (!node) return;
+
+    const spec = AUDIO_EFFECT_SPECS[name];
+    spec.apply(node as Parameters<typeof spec.apply>[0], prev, next);
 
     this.#applied[name] = next;
   }
