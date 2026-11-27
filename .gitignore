@@ -27,3 +27,6 @@ dist-ssr
 # Misc
 notes.md
 .env
+
+# Claude Code (local dev config, personal settings)
+.claude/

@@ -1,4 +1,4 @@
-import type { LfoState, LfoTarget } from "../../types/synth";
+import type { LfoParams, LfoTarget } from "../../types/effects";
 import RadioGroup from "../core/RadioGroup";
 import RangeControl from "../core/RangeControl";
 import SelectControl from "../core/SelectControl";
@@ -16,8 +16,8 @@ export default function LfoPanel({
   lfo,
   onUpdateLfo,
 }: {
-  lfo: LfoState;
-  onUpdateLfo: (patch: Partial<LfoState>) => void;
+  lfo: LfoParams;
+  onUpdateLfo: (patch: Partial<LfoParams>) => void;
 }) {
   return (
     <div className="grid grid-cols-[1fr] gap-y-2">

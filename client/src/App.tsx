@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { PlayIcon, PauseIcon } from "@phosphor-icons/react";
-import type { EffectName, EffectsState, LfoState } from "./types/synth";
-import { defaultEffects, defaultLfo } from "./types/synth";
+import type { EffectName, LfoParams } from "./types/effects";
+import { DEFAULT_TRACK_EFFECTS } from "./types/effects";
 import Button from "./components/core/NewButton";
 import GlobalControls from "./components/complex/GlobalControls";
 import TrackPanel from "./components/complex/TrackPanel";
@@ -19,6 +19,9 @@ import {
   useCurrentStep,
   useEnvelopes,
   useSequenceGrid,
+  usePan,
+  useTrackEffects,
+  useTrackMixers,
 } from "./hooks/useSynthState";
 import { useAudioActions } from "./hooks/useAudioActions";
 
@@ -30,6 +33,9 @@ export default function App() {
   const volume = useVolume();
   const envelopes = useEnvelopes();
   const sequenceGrid = useSequenceGrid();
+  const pan = usePan();
+  const trackEffects = useTrackEffects();
+  const trackMixers = useTrackMixers();
   const {
     togglePlay,
     handleBPMChange,
@@ -37,27 +43,24 @@ export default function App() {
     handleVolumeChange,
     handleEnvelopeChange,
     handleSequenceToggle,
+    handlePanChange,
+    handleEffectChange,
+    handleEffectToggle,
+    handleTrackVolumeChange,
+    handleTrackMuteToggle,
   } = useAudioActions();
 
-  const [pan, setPan] = useState(0);
   const [selectedTrack, setSelectedTrack] = useState(0);
   const [selectedEffect, setSelectedEffect] = useState<EffectName>("delay");
-  const [effects, setEffects] = useState<EffectsState>(defaultEffects);
-  const [lfo, setLfo] = useState<LfoState>(defaultLfo);
 
-  const updateLfo = (patch: Partial<LfoState>) => {
+  const [lfo, setLfo] = useState<LfoParams>(DEFAULT_TRACK_EFFECTS.lfo);
+
+  const updateLfo = (patch: Partial<LfoParams>) => {
     setLfo((prev) => ({ ...prev, ...patch }));
   };
 
   const [showKeyboard, setShowKeyboard] = useState(false);
   const [octave, setOctave] = useState(2);
-
-  const updateEffect = <K extends EffectName>(name: K, patch: Partial<EffectsState[K]>) => {
-    setEffects((prev) => ({
-      ...prev,
-      [name]: { ...prev[name], ...patch },
-    }));
-  };
 
   const numTracks = DRUM_SYNTH_CONFIG.length;
 
@@ -67,7 +70,6 @@ export default function App() {
         <div className="col-span-8 row-start-1 row-span-1 border border-cyan-400">
           <div className="bg-cyan-400 m-1">
             <FFTVisualizer />
-
           </div>
         </div>
         <div className="col-span-8 row-start-1 row-span-1">
@@ -77,47 +79,83 @@ export default function App() {
             bpm={bpm}
             swing={swing}
             onChangeVol={handleVolumeChange}
-            onChangePan={setPan}
+            onChangePan={handlePanChange}
             onChangeBpm={handleBPMChange}
             onChangeSwing={handleSwingChange}
           />
         </div>
         <div className="col-span-8 row-start-2 row-span-1">
           <EffectPanel
-            effects={effects}
+            effects={trackEffects[selectedTrack]}
+            trackName={DRUM_SYNTH_CONFIG[selectedTrack].name}
             selectedEffect={selectedEffect}
             onSelectEffect={setSelectedEffect}
-            onUpdateEffect={updateEffect}
+            onUpdateEffect={(name, patch) =>
+              handleEffectChange(selectedTrack, name, patch)
+            }
+            onToggleEffect={(name) => handleEffectToggle(selectedTrack, name)}
           />
         </div>
         <div className="col-span-8 row-start-2 row-span-3">
           <TrackPanel
             trackNames={DRUM_SYNTH_CONFIG.map((c) => c.name)}
             envelopes={envelopes}
+            mixers={trackMixers}
             selectedTrack={selectedTrack}
             onSelectTrack={setSelectedTrack}
             onEnvelopeChange={handleEnvelopeChange}
+            onTrackVolumeChange={handleTrackVolumeChange}
+            onTrackMuteToggle={handleTrackMuteToggle}
           />
         </div>
         <div className="col-span-8 row-start-3 row-span-1">
           <LfoPanel lfo={lfo} onUpdateLfo={updateLfo} />
         </div>
         <div className="col-span-full row-start-5 grid grid-cols-subgrid">
-          <Button className="col-span-2" active onClick={() => setShowKeyboard(!showKeyboard)}>{showKeyboard ? "SEQ" : "KEY"}</Button>
-          <Button className="col-span-2 grid place-items-center" active={isPlaying} activeClassName="bg-red-500 text-zinc-100" onClick={togglePlay} ariaLabel={isPlaying ? "Pause playback" : "Start playback"}>
-            {isPlaying ? <PauseIcon size={12} weight="fill" /> : <PlayIcon size={12} weight="fill" />}
+          <Button
+            className="col-span-2"
+            active
+            onClick={() => setShowKeyboard(!showKeyboard)}
+          >
+            {showKeyboard ? "SEQ" : "KEY"}
           </Button>
-          <Button className="col-span-2" onClick={() => setOctave((o) => Math.max(1, o - 1))} ariaLabel="Decrease octave">OCT-</Button>
-          <Button className="col-span-2" onClick={() => setOctave((o) => Math.min(6, o + 1))} ariaLabel="Increase octave">OCT+</Button>
+          <Button
+            className="col-span-2 grid place-items-center"
+            active={isPlaying}
+            activeClassName="bg-red-500 text-zinc-100"
+            onClick={togglePlay}
+            ariaLabel={isPlaying ? "Pause playback" : "Start playback"}
+          >
+            {isPlaying ? (
+              <PauseIcon size={12} weight="fill" />
+            ) : (
+              <PlayIcon size={12} weight="fill" />
+            )}
+          </Button>
+          <Button
+            className="col-span-2"
+            onClick={() => setOctave((o) => Math.max(1, o - 1))}
+            ariaLabel="Decrease octave"
+          >
+            OCT-
+          </Button>
+          <Button
+            className="col-span-2"
+            onClick={() => setOctave((o) => Math.min(6, o + 1))}
+            ariaLabel="Increase octave"
+          >
+            OCT+
+          </Button>
         </div>
         <div className="col-span-16 row-start-6 grid grid-cols-subgrid min-h-48">
-          {showKeyboard ?
+          {showKeyboard ? (
             <Keyboard
               octaves={2}
               baseOctave={octave}
               onNoteDown={(note) => console.log("down", note)}
               onNoteUp={(note) => console.log("up", note)}
-            /> :
+            />
+          ) : (
             <StepSequencer
               rows={numTracks}
               cols={16}
@@ -125,7 +163,7 @@ export default function App() {
               currentStep={currentStep}
               onToggle={(row, col) => handleSequenceToggle(row, col)}
             />
-          }
+          )}
         </div>
       </div>
     </div>
