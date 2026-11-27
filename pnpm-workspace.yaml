@@ -3,4 +3,9 @@ packages:
   - client
   - server
 allowBuilds:
+  # better-sqlite3's install script (prebuild-install || node-gyp rebuild)
+  # downloads the per-ABI native binary for the running Node. v13's bundled
+  # binary crashes on Node 22 (the LTS/Docker target), so we pin v11, which
+  # fetches a Node-22-compatible prebuild here.
+  better-sqlite3: true
   esbuild: true

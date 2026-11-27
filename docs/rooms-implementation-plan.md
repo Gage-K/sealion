@@ -72,10 +72,55 @@ merge/tie-break in `crdt/` while the code is fresh.
 
 ---
 
-## Phase 1 — Server becomes an authoritative, persistent RoomManager
+## Phase 1 — Server becomes an authoritative, persistent RoomManager ✅ DONE
 
 **Goal:** D3 (authoritative merger), D6 (codes), D7 (SQLite), D8 (cadence),
 D9 (evict/reload), D10 (merge-only).
+
+**What shipped:**
+
+- `server/src/db.js` — `better-sqlite3` (WAL), the `rooms` table, and
+  `getRoomState` / `roomExists` / `insertRoom` / `saveRoomState`. `DB_PATH` env,
+  default `./data/sealion.db` (gitignored).
+- `server/src/codes.js` — 6-char codes from a 31-char unambiguous alphabet,
+  collision-checked against the table.
+- `server/src/roomManager.js` — `Map<code, LiveRoom>`; `createRoom` (mint +
+  insert empty doc), `getOrLoad` (live or lazy-load from SQLite, null if
+  unknown), `applyUpdate` (**`crdt.merge` only**, D10.ii), coalescing ~1s flush
+  (flushes once per burst, not a trailing reset), `onEmpty` (force flush +
+  evict, D9). `SERVER_ID` is inert since the server never `.set`s.
+- `server/app.js` — `POST /rooms` → `{ code }` (+ permissive CORS, health at
+  `/`); WebSocket at `ws://host/room/<code>` via a manual `upgrade` handler that
+  404s unknown codes. On connect it **sends authoritative `.state` first**
+  (D10.i); `update` → merge + relay to the room's other sockets; `request` →
+  answer from the server's own copy (kills the ask-a-peer handshake); last
+  close → `onEmpty`.
+- Shared **`DEFAULT_KIT`** added to `@sealion/crdt` (`crdt/src/kit.ts`) as the
+  single source of truth for track **count**; the server builds its CRDT from
+  it, and the client asserts no drift vs `DRUM_SYNTH_CONFIG` at startup.
+
+**Deviations worth carrying into Phase 4:**
+
+- **`better-sqlite3` pinned to `^11`.** v13's bundled prebuilt binary segfaults
+  on Node 22 (our LTS/Docker target); v11's `prebuild-install` fetches a
+  Node-22-compatible binary, so **no compile toolchain is needed** on dev or in
+  the Alpine image. Its build script is enabled in `allowBuilds`.
+- **The server runs under `tsx`** (`dev`/`start` scripts) so it can import the
+  source-only `@sealion/crdt` `.ts` package at runtime — plain `node` can't
+  strip types from a dependency. `tsx` is a **runtime** dep (not dev), so the
+  prod `CMD` becomes `tsx server/app.js` (Phase 4).
+- The existing client still connects to a bare `ws://host` with no room, so it
+  won't talk to this server until Phase 2 wires the lobby + `/room/<code>` URL.
+
+**Checkpoint met** (scratch `ws` + `fetch` harness, fresh temp DB): `POST
+/rooms` mints a code; an unknown code is rejected; two sockets on one code seed
++ sync; `request` is answered authoritatively; a second room is isolated; and a
+full **server restart preserves state** (evict on empty → lazy reload on
+rejoin). bpm=142 written in run 1 came back after restart in run 2.
+
+---
+
+### Original Phase 1 notes (for reference)
 
 1. **Deps / build gate:** add `better-sqlite3` to `server/package.json`, and add
    `better-sqlite3: true` under `allowBuilds` in `pnpm-workspace.yaml` (pnpm
@@ -171,9 +216,15 @@ other within a moment.
 **Goal:** the model survives a real deploy on the Hetzner VPS (you just added the
 prod Docker setup in `7d5e67f`).
 
-1. **Native module in Docker:** [`server/Dockerfile.prod`](../server/Dockerfile.prod)
-   must have the build toolchain for `better-sqlite3` (e.g. `python3`, `make`,
-   `g++` on an Alpine/Debian base) at install time, or use a prebuilt base.
+1. **Native module + TS runtime in Docker:** `better-sqlite3@11`'s
+   `prebuild-install` downloads a `linuxmusl` prebuild on `node:22-alpine`, so
+   **no `python3`/`make`/`g++` toolchain is needed** — just make sure its build
+   script runs during `pnpm install` (it's enabled in `allowBuilds`; the current
+   `--prod` install must still run it). The server now runs under **`tsx`** (a
+   runtime dep), so update [`server/Dockerfile.prod`](../server/Dockerfile.prod)
+   `CMD` from `node server/app.js` to `tsx server/app.js` (or
+   `node --import tsx server/app.js`). If a prebuild ever isn't available, add
+   the toolchain back as a fallback.
 2. **Durable volume:** mount a volume for `DB_PATH` in
    [`docker-compose.prod.yml`](../docker-compose.prod.yml) so the SQLite file
    outlives container restarts. Set `DB_PATH` to the mounted path.

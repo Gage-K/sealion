@@ -2,3 +2,4 @@
 // schema, consumed by both the client and the sync server.
 export * from "./crdt";
 export * from "./effects";
+export * from "./kit";
