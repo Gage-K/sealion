@@ -1,4 +1,9 @@
-import type { SyncState, SyncTransport, SyncTransportDeps } from "./SyncTransport";
+import type {
+  ConnStatus,
+  SyncState,
+  SyncTransport,
+  SyncTransportDeps,
+} from "./SyncTransport";
 
 /** Wire protocol spoken to the sync server. Kept private to this adapter. */
 interface Message {
@@ -21,6 +26,7 @@ export class WebSocketTransport implements SyncTransport {
   #peerId: string;
   #getState: () => SyncState;
   #handlers = new Set<(state: SyncState) => void>();
+  #statusHandlers = new Set<(status: ConnStatus) => void>();
   #pending: string[] = [];
   #disposed = false;
 
@@ -38,10 +44,17 @@ export class WebSocketTransport implements SyncTransport {
       console.log("[Sync] Connected");
       for (const msg of this.#pending) ws.send(msg);
       this.#pending = [];
+      this.#emitStatus("open");
     };
 
-    ws.onerror = (err) => console.error("[Sync] Error:", err);
-    ws.onclose = () => console.warn("[Sync] Connection closed");
+    ws.onerror = (err) => {
+      console.error("[Sync] Error:", err);
+      this.#emitStatus("error");
+    };
+    ws.onclose = () => {
+      console.warn("[Sync] Connection closed");
+      this.#emitStatus("closed");
+    };
 
     ws.onmessage = (event) => {
       try {
@@ -96,9 +109,22 @@ export class WebSocketTransport implements SyncTransport {
     };
   }
 
+  onStatus(handler: (status: ConnStatus) => void) {
+    this.#statusHandlers.add(handler);
+    return () => {
+      this.#statusHandlers.delete(handler);
+    };
+  }
+
+  #emitStatus(status: ConnStatus) {
+    if (this.#disposed) return;
+    this.#statusHandlers.forEach((h) => h(status));
+  }
+
   dispose() {
     this.#disposed = true;
     this.#handlers.clear();
+    this.#statusHandlers.clear();
     this.#pending = [];
     this.#ws.close();
   }

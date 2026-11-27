@@ -3,6 +3,9 @@ import type { DrumSynthCRDT } from "../types/crdt";
 /** The full session state exchanged between peers. */
 export type SyncState = DrumSynthCRDT["state"];
 
+/** Connection lifecycle an adapter may report, for connect/"room not found" UX. */
+export type ConnStatus = "open" | "closed" | "error";
+
 /**
  * The seam over which peers exchange session state: a local change goes out via
  * `broadcast`, a remote peer's state comes in via the handler passed to
@@ -17,6 +20,11 @@ export interface SyncTransport {
   onRemote(handler: (state: SyncState) => void): () => void;
   /** Ask peers for their current state — the initial pull on connect. */
   requestState(): void;
+  /**
+   * Observe the underlying connection's lifecycle, where the adapter has one.
+   * Optional: in-process adapters (tests) have no connection to report.
+   */
+  onStatus?(handler: (status: ConnStatus) => void): () => void;
   /** Tear down the underlying connection or registration. */
   dispose(): void;
 }

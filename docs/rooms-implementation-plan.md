@@ -160,9 +160,41 @@ on rejoin.
 
 ---
 
-## Phase 2 — Client lobby, routing, and room-scoped providers
+## Phase 2 — Client lobby, routing, and room-scoped providers ✅ DONE
 
 **Goal:** D5 (lobby), D6 (URL), D10.i (gate editing until seeded).
+
+**What shipped:**
+
+- `client/src/routing.ts` — hand-rolled routing (`usePathname` via
+  `useSyncExternalStore` + `navigate`), no router dependency.
+- `client/src/Root.tsx` + `main.tsx` — shell: `/room/<code>` → `RoomView`
+  (keyed by code), else `Lobby`. The provider stack moved out of `main.tsx`
+  into `RoomView`, so nothing connects until a room is chosen.
+- `client/src/config/server.ts` — `VITE_WS_URL` base, HTTP base derived from it,
+  `createRoom()` (`POST /rooms`), `roomWsUrl`, and code parse/validate helpers
+  (accepts a raw code or a pasted `/room/<code>` link, normalizes case).
+- `client/src/config/identity.ts` — ephemeral nickname in sessionStorage
+  (random animal default), captured in the lobby for Phase 3 presence.
+- `client/src/components/Lobby.tsx` — create / join / nickname (D5).
+- `client/src/components/RoomView.tsx` — mounts CRDT → Sync(code) → AudioEngine
+  **only once seeded**; shows a connecting state, a "room not found" state for
+  an unknown code, and a small room-code + copy-link badge.
+- `SyncProvider` now takes a `code`, connects to `ws://host/room/<code>`, and
+  tracks the handshake: first remote merge → `ready` (seed-before-edit, D10.i);
+  a close/error before that → `error`. Exposed via `RoomStatusContext`
+  (`useRoomStatus`). The `SyncTransport` seam gained an optional `onStatus`;
+  `WebSocketTransport` reports open/close/error (InMemoryTransport unaffected).
+
+**Checkpoint met** (live, two browser tabs against a dev server): lobby →
+create lands in `/room/<code>` with a shareable URL; a second tab on that URL
+gets the authoritative seed and edits sync **live both ways**; reload restores
+state from the server; an unknown code shows "room not found"; join-by-code
+normalizes case. `tsc -b` + `vite build` clean; 10/10 tests pass.
+
+---
+
+### Original Phase 2 notes (for reference)
 
 1. **Minimal routing** in `main.tsx`/`App` shell: no `/room/...` → `<Lobby>`;
    `/room/:code` → `<RoomView code=...>`.
