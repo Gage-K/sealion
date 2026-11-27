@@ -3,6 +3,7 @@ import { WaveSquareIcon, WaveSawtoothIcon, WaveSineIcon, WaveTriangleIcon } from
 import type { Waveform } from "../../types/effects";
 import type { Envelope, Mixer } from "../../types/crdt";
 import Button from "../core/NewButton";
+import KeyButton from "../core/KeyButton";
 import RangeControl, { formatVolume } from "../core/RangeControl";
 
 export const waveOptions: { value: Waveform; label: ReactNode }[] = [
@@ -52,20 +53,16 @@ export default function TrackPanel({
       </div>
       <div className="grid grid-cols-8 gap-1">
         {trackNames.map((name, i) => (
-          <Button
+          <KeyButton
             key={i}
-            className="col-span-1 text-[10px] px-0 relative"
+            className="[--key-font:0.45rem]"
             active={selectedTrack === i}
+            led={mixers[i].muted ? "alert" : undefined}
             onClick={() => onSelectTrack(i)}
+            ariaLabel={`Select ${name}${mixers[i].muted ? " (muted)" : ""}`}
           >
             {name}
-            {mixers[i].muted && (
-              <span
-                aria-hidden="true"
-                className="absolute top-0.5 right-0.5 w-1 h-1 rounded-full bg-red-500"
-              />
-            )}
-          </Button>
+          </KeyButton>
         ))}
       </div>
       <RangeControl

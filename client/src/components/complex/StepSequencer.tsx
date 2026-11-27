@@ -1,4 +1,5 @@
 import { memo, useCallback, useState } from "react";
+import clsx from "clsx";
 
 const StepButton = memo(function StepButton({
   label,
@@ -15,16 +16,25 @@ const StepButton = memo(function StepButton({
   current?: boolean;
   onToggle: (row: number, col: number) => void;
 }) {
+  // Flat terminal cell: square, 1px border, solid fill when on. A downbeat
+  // (every 4th column) reads a touch brighter so the bar grid stays legible;
+  // the playhead is a cyan inset outline so it shows over on and off cells.
+  const downbeat = col % 4 === 0;
   return (
     <button
-      className="step-pushable"
+      className={clsx(
+        "aspect-square w-full rounded-xs border transition-colors",
+        active
+          ? "bg-red-500 border-red-500 hover:bg-red-400"
+          : downbeat
+            ? "bg-zinc-800 border-zinc-600 hover:bg-zinc-700"
+            : "bg-zinc-900 border-zinc-700 hover:bg-zinc-800",
+        current && "outline outline-1 -outline-offset-1 outline-cyan-300",
+      )}
       onClick={() => onToggle(row, col)}
       aria-pressed={active}
       data-current={current ? "true" : undefined}
     >
-      <span className="step-shadow" aria-hidden="true" />
-      <span className="step-edge" aria-hidden="true" />
-      <span className="step-face" aria-hidden="true" />
       <span className="sr-only">{label}</span>
     </button>
   );
