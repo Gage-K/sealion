@@ -13,6 +13,9 @@ importers:
       '@phosphor-icons/react':
         specifier: ^2.1.10
         version: 2.1.10(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@sealion/crdt':
+        specifier: workspace:*
+        version: link:../crdt
       '@tailwindcss/vite':
         specifier: ^4.3.3
         version: 4.3.3(vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0))
@@ -84,8 +87,17 @@ importers:
         specifier: ^5.1.1
         version: 5.1.1(@types/node@22.20.1)(vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0))
 
+  crdt:
+    devDependencies:
+      typescript:
+        specifier: ~5.8.3
+        version: 5.8.3
+
   server:
     dependencies:
+      '@sealion/crdt':
+        specifier: workspace:*
+        version: link:../crdt
       ws:
         specifier: ^8.18.3
         version: 8.19.0

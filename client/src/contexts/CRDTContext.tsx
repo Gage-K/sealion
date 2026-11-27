@@ -1,10 +1,10 @@
-import { DrumSynthCRDT } from "../types/crdt";
+import { makeDrumSynthCRDT } from "../config/makeCRDT";
 import { CRDTContext } from "../hooks/useCRDT";
 import { useMemo } from "react";
 
 export const CRDTProvider = ({ children }: { children: React.ReactNode }) => {
   const drumSynthCRDT = useMemo(
-    () => new DrumSynthCRDT(crypto.randomUUID()),
+    () => makeDrumSynthCRDT(crypto.randomUUID()),
     []
   );
   return (
