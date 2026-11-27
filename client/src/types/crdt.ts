@@ -239,10 +239,11 @@ class GlobalSettingsCRDT {
 
   merge(state: State<GlobalSettings>) {
     this.#data.merge(state);
-    this.notify();
+    this.notifyRender();
   }
 
   private listeners: Listener[] = [];
+  private localListeners: Listener[] = [];
 
   subscribe(listener: Listener) {
     this.listeners.push(listener);
@@ -251,7 +252,26 @@ class GlobalSettingsCRDT {
     };
   }
 
+  /**
+   * Fired only by local writes (the set/toggle methods), never by merge(). The
+   * sync transport subscribes here so applying a remote merge can't trigger a
+   * re-broadcast, which would echo endlessly between peers.
+   */
+  subscribeLocal(listener: Listener) {
+    this.localListeners.push(listener);
+    return () => {
+      this.localListeners = this.localListeners.filter((l) => l !== listener);
+    };
+  }
+
+  // Local writes notify both channels; merge() calls notifyRender() instead so
+  // remote state updates the UI without re-broadcasting.
   private notify() {
+    this.listeners.forEach((l) => l());
+    this.localListeners.forEach((l) => l());
+  }
+
+  private notifyRender() {
     this.listeners.forEach((l) => l());
   }
 }
@@ -366,10 +386,11 @@ class TrackSettingsCRDT {
   merge(state: Partial<TrackSettingsState>) {
     this.#data.merge(state.core ?? {});
     this.#fx.merge(state.fx ?? {});
-    this.notify();
+    this.notifyRender();
   }
 
   private listeners: Listener[] = [];
+  private localListeners: Listener[] = [];
 
   subscribe(listener: Listener) {
     this.listeners.push(listener);
@@ -378,7 +399,26 @@ class TrackSettingsCRDT {
     };
   }
 
+  /**
+   * Fired only by local writes (the set/toggle methods), never by merge(). The
+   * sync transport subscribes here so applying a remote merge can't trigger a
+   * re-broadcast, which would echo endlessly between peers.
+   */
+  subscribeLocal(listener: Listener) {
+    this.localListeners.push(listener);
+    return () => {
+      this.localListeners = this.localListeners.filter((l) => l !== listener);
+    };
+  }
+
+  // Local writes notify both channels; merge() calls notifyRender() instead so
+  // remote state updates the UI without re-broadcasting.
   private notify() {
+    this.listeners.forEach((l) => l());
+    this.localListeners.forEach((l) => l());
+  }
+
+  private notifyRender() {
     this.listeners.forEach((l) => l());
   }
 }
@@ -465,10 +505,11 @@ class SequencerCRDT {
 
   merge(state: SequencerCRDT["state"]) {
     this.#data.merge(state);
-    this.notify();
+    this.notifyRender();
   }
 
   private listeners: Listener[] = [];
+  private localListeners: Listener[] = [];
 
   subscribe(listener: Listener) {
     this.listeners.push(listener);
@@ -477,7 +518,26 @@ class SequencerCRDT {
     };
   }
 
+  /**
+   * Fired only by local writes (the set/toggle methods), never by merge(). The
+   * sync transport subscribes here so applying a remote merge can't trigger a
+   * re-broadcast, which would echo endlessly between peers.
+   */
+  subscribeLocal(listener: Listener) {
+    this.localListeners.push(listener);
+    return () => {
+      this.localListeners = this.localListeners.filter((l) => l !== listener);
+    };
+  }
+
+  // Local writes notify both channels; merge() calls notifyRender() instead so
+  // remote state updates the UI without re-broadcasting.
   private notify() {
+    this.listeners.forEach((l) => l());
+    this.localListeners.forEach((l) => l());
+  }
+
+  private notifyRender() {
     this.listeners.forEach((l) => l());
   }
 }
@@ -488,6 +548,7 @@ export class DrumSynthCRDT {
   readonly tracks: { settings: TrackSettingsCRDT; sequence: SequencerCRDT }[];
 
   private listeners: Listener[] = [];
+  private localListeners: Listener[] = [];
   private unsubscribeFunctions: (() => void)[] = [];
 
   // Cached, referentially-stable snapshots for useSyncExternalStore. Each is
@@ -541,9 +602,14 @@ export class DrumSynthCRDT {
   }
 
   private setupSubscriptions() {
+    // Render subscriptions fire on both local writes and applied merges, so the
+    // UI reflects remote peers' edits. Local subscriptions re-emit only local
+    // writes, which is what the sync transport broadcasts.
+
     // Global settings changes don't affect the cached array snapshots.
     this.unsubscribeFunctions.push(
       this.globalSettings.subscribe(() => this.notify()),
+      this.globalSettings.subscribeLocal(() => this.notifyLocal()),
     );
 
     // Track changes invalidate the matching cached snapshot before notifying.
@@ -555,12 +621,14 @@ export class DrumSynthCRDT {
           this.mixersDirty = true;
           this.notify();
         }),
+        track.settings.subscribeLocal(() => this.notifyLocal()),
       );
       this.unsubscribeFunctions.push(
         track.sequence.subscribe(() => {
           this.gridDirty = true;
           this.notify();
         }),
+        track.sequence.subscribeLocal(() => this.notifyLocal()),
       );
     });
   }
@@ -574,8 +642,21 @@ export class DrumSynthCRDT {
     };
   };
 
+  // Arrow field: the sync transport subscribes here to broadcast on local
+  // writes. Fired only by set*/toggle* on a sub-store, never by merge().
+  subscribeLocal = (listener: Listener) => {
+    this.localListeners.push(listener);
+    return () => {
+      this.localListeners = this.localListeners.filter((l) => l !== listener);
+    };
+  };
+
   private notify() {
     this.listeners.forEach((l) => l());
+  }
+
+  private notifyLocal() {
+    this.localListeners.forEach((l) => l());
   }
 
   // --- Stable snapshot getters for useSyncExternalStore --------------------
@@ -625,6 +706,7 @@ export class DrumSynthCRDT {
     this.unsubscribeFunctions.forEach((unsubscribe) => unsubscribe());
     this.unsubscribeFunctions = [];
     this.listeners = [];
+    this.localListeners = [];
   }
 
   get state() {
