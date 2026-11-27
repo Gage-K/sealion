@@ -221,9 +221,39 @@ restored from the server. A fresh random code URL → "room not found".
 
 ---
 
-## Phase 3 — Presence / awareness (D11)
+## Phase 3 — Presence / awareness (D11) ✅ DONE
 
 **Goal:** see who's in the room. Ephemeral, never persisted.
+
+**What shipped:**
+
+- Presence rides the **same room socket** as sync (not a second connection or a
+  separate provider). The `SyncTransport` seam gained optional `sendPresence` /
+  `onPresence` + a `PresenceMessage`/`Member` type; `WebSocketTransport` routes
+  any `presence/*` frame to presence handlers before the state path.
+- **Protocol:** client → `presence/hello { connId, nickname }` (connId = the
+  CRDT peer id; nickname from the lobby); server → `presence/roster { members }`
+  to the whole room on every join/leave; `presence/leave` accepted too, though
+  socket close is the main path.
+- **Server** keeps `room.presence` as `Map<socket, {connId, nickname}>` and
+  rebroadcasts the roster on hello and on close. It **never touches SQLite or the
+  CRDT** — a separate branch from `update`/`request`.
+- **Client:** `SyncProvider` sends hello on connect and exposes the roster via
+  `PresenceContext` (`usePresence`); `RoomView` renders a compact roster
+  (count + nicknames, the viewer marked YOU).
+
+**Deviation:** presence lives in `SyncProvider` (which already owns the socket)
+rather than a standalone `PresenceProvider` — same behavior, one less layer.
+
+**Checkpoint met** (live, two tabs as ALICE/BOB): each sees the other in the
+roster with itself marked YOU; a join updates both within a moment; closing a
+tab drops its member from the other's roster. Build + 10/10 tests green.
+
+**Proposed defaults (unchanged):** nickname-only roster, no cursors, no history.
+
+---
+
+### Original Phase 3 notes (for reference)
 
 1. **Protocol:** add `presence/hello` (`{ connId, nickname }`), `presence/roster`
    (`{ members: [{connId, nickname}] }`), `presence/leave`. All room-scoped.

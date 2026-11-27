@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useCRDT } from "../hooks/useCRDT";
 import { RoomStatusContext, type RoomStatus } from "../hooks/useRoomStatus";
+import { PresenceContext } from "../hooks/usePresence";
 import { roomWsUrl } from "../config/server";
-import type { SyncTransport, SyncTransportDeps } from "./SyncTransport";
+import { getNickname } from "../config/identity";
+import type { Member, SyncTransport, SyncTransportDeps } from "./SyncTransport";
 import { WebSocketTransport } from "./WebSocketTransport";
 
 /**
@@ -28,9 +30,11 @@ export const SyncProvider = ({
 }) => {
   const crdt = useCRDT();
   const [status, setStatus] = useState<RoomStatus>("connecting");
+  const [roster, setRoster] = useState<Member[]>([]);
 
   useEffect(() => {
     setStatus("connecting");
+    setRoster([]);
     let seeded = false;
 
     const deps: SyncTransportDeps = {
@@ -51,20 +55,33 @@ export const SyncProvider = ({
     const offStatus = transport.onStatus?.((s) => {
       if (!seeded && (s === "error" || s === "closed")) setStatus("error");
     });
+    const offPresence = transport.onPresence?.((msg) => {
+      if (msg.type === "presence/roster") setRoster(msg.members);
+    });
     const offLocal = crdt.subscribeLocal(() => transport.broadcast(crdt.state));
     transport.requestState();
+    // Announce ourselves; the server replies to the room with the roster. The
+    // frame is queued until the socket opens, like requestState.
+    transport.sendPresence?.({
+      type: "presence/hello",
+      connId: crdt.id,
+      nickname: getNickname(),
+    });
 
     return () => {
       offLocal();
       offRemote();
       offStatus?.();
+      offPresence?.();
       transport.dispose();
     };
   }, [crdt, code, createTransport]);
 
   return (
     <RoomStatusContext.Provider value={status}>
-      {children}
+      <PresenceContext.Provider value={roster}>
+        {children}
+      </PresenceContext.Provider>
     </RoomStatusContext.Provider>
   );
 };

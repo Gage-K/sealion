@@ -6,6 +6,20 @@ export type SyncState = DrumSynthCRDT["state"];
 /** Connection lifecycle an adapter may report, for connect/"room not found" UX. */
 export type ConnStatus = "open" | "closed" | "error";
 
+/** One connected participant in a room (design D11). */
+export type Member = { connId: string; nickname: string };
+
+/**
+ * Presence frames, carried over the same room socket as state but never
+ * persisted and never merged into the CRDT. The client announces itself with
+ * `hello`; the server replies to the whole room with the current `roster` on
+ * every join/leave.
+ */
+export type PresenceMessage =
+  | { type: "presence/hello"; connId: string; nickname: string }
+  | { type: "presence/leave"; connId: string }
+  | { type: "presence/roster"; members: Member[] };
+
 /**
  * The seam over which peers exchange session state: a local change goes out via
  * `broadcast`, a remote peer's state comes in via the handler passed to
@@ -25,6 +39,10 @@ export interface SyncTransport {
    * Optional: in-process adapters (tests) have no connection to report.
    */
   onStatus?(handler: (status: ConnStatus) => void): () => void;
+  /** Send a presence frame on the room socket. Optional (in-process adapters skip it). */
+  sendPresence?(message: PresenceMessage): void;
+  /** Observe presence frames arriving from the server. Returns an unsubscribe. */
+  onPresence?(handler: (message: PresenceMessage) => void): () => void;
   /** Tear down the underlying connection or registration. */
   dispose(): void;
 }

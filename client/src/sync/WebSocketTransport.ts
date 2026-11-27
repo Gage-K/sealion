@@ -1,5 +1,6 @@
 import type {
   ConnStatus,
+  PresenceMessage,
   SyncState,
   SyncTransport,
   SyncTransportDeps,
@@ -27,6 +28,7 @@ export class WebSocketTransport implements SyncTransport {
   #getState: () => SyncState;
   #handlers = new Set<(state: SyncState) => void>();
   #statusHandlers = new Set<(status: ConnStatus) => void>();
+  #presenceHandlers = new Set<(message: PresenceMessage) => void>();
   #pending: string[] = [];
   #disposed = false;
 
@@ -58,24 +60,30 @@ export class WebSocketTransport implements SyncTransport {
 
     ws.onmessage = (event) => {
       try {
-        const message: Message = JSON.parse(event.data);
+        const message: Message | PresenceMessage = JSON.parse(event.data);
 
-        if (!message.type || !message.id) {
+        if (typeof message.type === "string" && message.type.startsWith("presence/")) {
+          this.#presenceHandlers.forEach((h) => h(message as PresenceMessage));
+          return;
+        }
+
+        const stateMsg = message as Message;
+        if (!stateMsg.type || !stateMsg.id) {
           console.warn("[Sync] Invalid message format:", message);
           return;
         }
 
         // Ignore our own echoes.
-        if (message.id === this.#peerId) return;
+        if (stateMsg.id === this.#peerId) return;
 
-        if (message.type === "request") {
+        if (stateMsg.type === "request") {
           // A peer asked for current state; reply with ours.
           this.#send({ type: "update", id: this.#peerId, data: this.#getState() });
-        } else if (message.type === "update") {
-          if (message.data) {
-            this.#handlers.forEach((h) => h(message.data!));
+        } else if (stateMsg.type === "update") {
+          if (stateMsg.data) {
+            this.#handlers.forEach((h) => h(stateMsg.data!));
           } else {
-            console.warn("[Sync] Update message missing data:", message);
+            console.warn("[Sync] Update message missing data:", stateMsg);
           }
         }
       } catch (err) {
@@ -85,8 +93,11 @@ export class WebSocketTransport implements SyncTransport {
   }
 
   #send(message: Message) {
+    this.#sendSerialized(JSON.stringify(message));
+  }
+
+  #sendSerialized(serialized: string) {
     if (this.#disposed) return;
-    const serialized = JSON.stringify(message);
     if (this.#ws.readyState === WebSocket.OPEN) {
       this.#ws.send(serialized);
     } else {
@@ -116,6 +127,17 @@ export class WebSocketTransport implements SyncTransport {
     };
   }
 
+  sendPresence(message: PresenceMessage) {
+    this.#sendSerialized(JSON.stringify(message));
+  }
+
+  onPresence(handler: (message: PresenceMessage) => void) {
+    this.#presenceHandlers.add(handler);
+    return () => {
+      this.#presenceHandlers.delete(handler);
+    };
+  }
+
   #emitStatus(status: ConnStatus) {
     if (this.#disposed) return;
     this.#statusHandlers.forEach((h) => h(status));
@@ -125,6 +147,7 @@ export class WebSocketTransport implements SyncTransport {
     this.#disposed = true;
     this.#handlers.clear();
     this.#statusHandlers.clear();
+    this.#presenceHandlers.clear();
     this.#pending = [];
     this.#ws.close();
   }

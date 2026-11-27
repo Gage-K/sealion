@@ -5,6 +5,8 @@ import { CRDTProvider } from "../contexts/CRDTContext";
 import { SyncProvider } from "../sync/SyncProvider";
 import { AudioEngineProvider } from "../contexts/AudioEngineContext";
 import { useRoomStatus } from "../hooks/useRoomStatus";
+import { usePresence } from "../hooks/usePresence";
+import { useCRDT } from "../hooks/useCRDT";
 import { navigate } from "../routing";
 
 /**
@@ -53,8 +55,35 @@ function RoomGate({ code }: { code: string }) {
   return (
     <AudioEngineProvider>
       <RoomBadge code={code} />
+      <Roster />
       <App />
     </AudioEngineProvider>
+  );
+}
+
+/** Live roster of who's in the room (design D11); the viewer is marked YOU. */
+function Roster() {
+  const members = usePresence();
+  const selfId = useCRDT().id;
+  if (members.length === 0) return null;
+  return (
+    <div className="fixed top-2 right-2 z-10 text-xs text-right">
+      <div className="text-zinc-500 mb-1">{members.length} HERE</div>
+      <ul className="flex flex-col gap-0.5">
+        {members.map((m) => {
+          const isSelf = m.connId === selfId;
+          return (
+            <li
+              key={m.connId}
+              className={isSelf ? "text-cyan-400" : "text-zinc-300"}
+            >
+              {m.nickname}
+              {isSelf && <span className="text-zinc-600"> (YOU)</span>}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 

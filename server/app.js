@@ -67,6 +67,18 @@ function parseRoomCode(url) {
   return match ? match[1] : null;
 }
 
+/**
+ * Send the room's current roster to everyone in it (design D11). Presence lives
+ * only in `room.presence` (keyed by socket) — never in SQLite or the CRDT.
+ */
+function broadcastRoster(room) {
+  const members = [...room.presence.values()];
+  const payload = JSON.stringify({ type: "presence/roster", members });
+  for (const peer of room.sockets) {
+    if (peer.readyState === peer.OPEN) peer.send(payload);
+  }
+}
+
 // Reject unknown/malformed room URLs before completing the upgrade, so a bad
 // code never opens a socket.
 server.on("upgrade", (req, socket, head) => {
@@ -98,6 +110,20 @@ wss.on("connection", (ws, _req, { code, room }) => {
     }
     if (!msg || typeof msg.type !== "string") return;
 
+    if (msg.type === "presence/hello") {
+      room.presence.set(ws, {
+        connId: String(msg.connId ?? ""),
+        nickname: String(msg.nickname ?? "anon").slice(0, 24),
+      });
+      broadcastRoster(room);
+      return;
+    }
+
+    if (msg.type === "presence/leave") {
+      if (room.presence.delete(ws)) broadcastRoster(room);
+      return;
+    }
+
     if (msg.type === "request") {
       // Answer from our own authoritative copy (replaces the ask-a-peer dance).
       ws.send(
@@ -118,8 +144,13 @@ wss.on("connection", (ws, _req, { code, room }) => {
 
   ws.on("close", () => {
     room.sockets.delete(ws);
+    const wasPresent = room.presence.delete(ws);
     console.log(`[Server] left ${code} (${room.sockets.size} connected)`);
-    if (room.sockets.size === 0) rooms.onEmpty(code);
+    if (room.sockets.size === 0) {
+      rooms.onEmpty(code);
+    } else if (wasPresent) {
+      broadcastRoster(room);
+    }
   });
 });
 
