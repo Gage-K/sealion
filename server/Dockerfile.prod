@@ -1,18 +1,30 @@
-# The WebSocket relay. Tiny Node process, listens on $PORT (default 8080).
-# Context is the repo root (like bibliotab) so the pnpm workspace + lockfile are available.
+# The authoritative, SQLite-backed sync server. Node process, listens on $PORT
+# (default 8080). Context is the repo root so the pnpm workspace + lockfile are
+# available. Runs under tsx so it can import the source-only @sealion/crdt
+# TypeScript package at runtime (no build step).
 FROM node:22-alpine
 RUN corepack enable
 WORKDIR /app
 
-# Only the server's deps (ws).
+# Install the server's subtree. @sealion/crdt is a workspace dependency, so its
+# package.json must be present for pnpm to resolve it. better-sqlite3's install
+# script (prebuild-install) downloads a musl prebuilt binary here — no compile
+# toolchain needed (its build is enabled in pnpm-workspace.yaml allowBuilds).
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY server/package.json ./server/
 COPY client/package.json ./client/
+COPY crdt/package.json ./crdt/
 RUN pnpm install --frozen-lockfile --filter @sealion/server --prod
 
+# The server source and the shared CRDT source (tsx transpiles the latter).
 COPY server/ ./server/
+COPY crdt/ ./crdt/
 
 ENV PORT=8080
+# Durable SQLite lives on a mounted volume (see docker-compose.prod.yml).
+ENV DB_PATH=/data/sealion.db
 EXPOSE 8080
-# Run from the repo root so `ws` resolves from the hoisted node_modules.
-CMD ["node", "server/app.js"]
+# Invoke tsx directly (pnpm installs its bin under server/node_modules). app.js
+# lives in /app/server, so it resolves @sealion/crdt from the workspace symlink.
+# Going through `pnpm start` instead makes pnpm re-check the workspace on boot.
+CMD ["server/node_modules/.bin/tsx", "server/app.js"]

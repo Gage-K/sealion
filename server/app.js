@@ -33,7 +33,9 @@ const server = createServer((req, res) => {
     return;
   }
 
-  if (req.method === "POST" && req.url === "/rooms") {
+  const path = stripWsPrefix(req.url);
+
+  if (req.method === "POST" && path === "/rooms") {
     try {
       const code = rooms.createRoom();
       res.writeHead(200, { "Content-Type": "application/json" });
@@ -47,7 +49,7 @@ const server = createServer((req, res) => {
     return;
   }
 
-  if (req.method === "GET" && (req.url === "/" || req.url === "/health")) {
+  if (req.method === "GET" && (path === "/" || path === "/health")) {
     res.writeHead(200, { "Content-Type": "text/plain" });
     res.end("sealion sync server ok");
     return;
@@ -61,9 +63,18 @@ const server = createServer((req, res) => {
 
 const wss = new WebSocketServer({ noServer: true });
 
+/**
+ * Strip the edge proxy's `/ws` route prefix if present, so the server accepts
+ * both the bare paths (dev: ws://host:8080/room/<code>) and the prefixed ones
+ * (prod: the Caddy edge routes `/ws` → here, and may or may not strip it).
+ */
+function stripWsPrefix(url = "") {
+  return url.replace(/^\/ws(?=\/|$)/, "") || "/";
+}
+
 /** Extract the room code from a `/room/<code>` upgrade URL, or null. */
 function parseRoomCode(url) {
-  const match = /^\/room\/([^/?#]+)/.exec(url || "");
+  const match = /^\/room\/([^/?#]+)/.exec(stripWsPrefix(url));
   return match ? match[1] : null;
 }
 

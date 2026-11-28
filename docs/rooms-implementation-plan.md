@@ -273,10 +273,41 @@ other within a moment.
 
 ---
 
-## Phase 4 — Deploy wiring + end-to-end verification
+## Phase 4 — Deploy wiring + end-to-end verification ✅ DONE
 
 **Goal:** the model survives a real deploy on the Hetzner VPS (you just added the
 prod Docker setup in `7d5e67f`).
+
+**What shipped:**
+
+- **Both Dockerfiles now copy `crdt/`** — the Phase 0 workspace split had broken
+  them (neither resolved `@sealion/crdt`). `server/Dockerfile.prod` also copies
+  the CRDT **source** (tsx loads it at runtime) and runs
+  `CMD ["server/node_modules/.bin/tsx", "server/app.js"]`;
+  `client/Dockerfile.prod` copies it for the Vite build.
+- **`better-sqlite3` needs no toolchain in the image** — `prebuild-install`
+  downloads the `linuxmusl` prebuild during `pnpm install` (build enabled in
+  `allowBuilds`).
+- **Durable volume** — `docker-compose.prod.yml` mounts the named volume
+  `sealion-data` at `/data` and sets `DB_PATH=/data/sealion.db`, so rooms
+  outlive container restarts/rebuilds.
+- **`/ws` prefix tolerance** — the server strips a leading `/ws` (the edge's
+  route key), so both `ws://host/ws/room/<code>` and `POST /ws/rooms` work
+  whether or not Caddy strips the prefix; dev's bare paths are unaffected. The
+  SPA `try_files` fallback already serves `/room/<code>` → index.html, so nginx
+  is unchanged.
+- **`.dockerignore`** excludes local SQLite data; **`docs/deploy.md`** updated
+  (prefix routing, durable volume + backup, rooms-not-stateless notes).
+
+**Checkpoint met:** `docker compose config` validates; **both images build**;
+the `sealion-sync` image boots under tsx, loads the musl `better-sqlite3`
+prebuild, serves health + `POST /ws/rooms`, accepts WS at `/room/<code>` and
+`/ws/room/<code>`, rejects unknown codes, and a room **survived a container
+restart** on the volume.
+
+---
+
+### Original Phase 4 notes (for reference)
 
 1. **Native module + TS runtime in Docker:** `better-sqlite3@11`'s
    `prebuild-install` downloads a `linuxmusl` prebuild on `node:22-alpine`, so

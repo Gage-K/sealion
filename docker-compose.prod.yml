@@ -23,7 +23,7 @@ services:
     networks:
       - web
 
-  # WebSocket relay on :8080.
+  # Authoritative, SQLite-backed sync server on :8080.
   sealion-sync:
     build:
       context: .
@@ -32,9 +32,17 @@ services:
     restart: always
     environment:
       PORT: 8080
+      # Durable rooms store on the named volume below; survives restarts/rebuilds.
+      DB_PATH: /data/sealion.db
+    volumes:
+      - sealion-data:/data
     networks:
       - web
 
 networks:
   web:
     external: true
+
+volumes:
+  # Holds the SQLite rooms database so rooms outlive the container.
+  sealion-data:
