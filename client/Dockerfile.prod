@@ -5,13 +5,17 @@ RUN corepack enable
 WORKDIR /app
 
 # Install deps against the workspace lockfile (only the client's subtree).
+# @sealion/crdt is a workspace dependency, so its package.json must be present.
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY client/package.json ./client/
 COPY server/package.json ./server/
+COPY crdt/package.json ./crdt/
 RUN pnpm install --frozen-lockfile --filter @sealion/client
 
-# Build. VITE_WS_URL is baked in at build time — it must point at the public wss:// endpoint.
+# Build. VITE_WS_URL is baked in at build time — it must point at the public
+# wss:// endpoint. The shared CRDT source is needed for the typecheck + bundle.
 COPY client/ ./client/
+COPY crdt/ ./crdt/
 ARG VITE_WS_URL
 ENV VITE_WS_URL=$VITE_WS_URL
 RUN pnpm --filter @sealion/client build

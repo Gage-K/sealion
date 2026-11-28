@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DrumSynthCRDT } from "../types/crdt";
+import { makeDrumSynthCRDT } from "../config/makeCRDT";
 import { InMemoryHub, InMemoryTransport } from "./InMemoryTransport";
 
 /**
@@ -8,7 +8,7 @@ import { InMemoryHub, InMemoryTransport } from "./InMemoryTransport";
  * (e.g. requestState) directly.
  */
 function connect(id: string, hub: InMemoryHub) {
-  const crdt = new DrumSynthCRDT(id);
+  const crdt = makeDrumSynthCRDT(id);
   const transport = new InMemoryTransport(hub, {
     peerId: crdt.id,
     getState: () => crdt.state,
@@ -40,8 +40,8 @@ describe("sync seam", () => {
   it("resolves concurrent edits to the same register deterministically (LWW tie-break)", () => {
     // Same logical timestamp (each register's first write is ts 1), different
     // peer ids. The larger peer id wins the tie, so both converge to B's value.
-    const a = new DrumSynthCRDT("A");
-    const b = new DrumSynthCRDT("B");
+    const a = makeDrumSynthCRDT("A");
+    const b = makeDrumSynthCRDT("B");
 
     a.tracks[0].sequence.setStep(1, [true]);
     b.tracks[0].sequence.setStep(1, [false]);
@@ -56,8 +56,8 @@ describe("sync seam", () => {
   });
 
   it("does not re-broadcast an applied merge (no echo)", () => {
-    const a = new DrumSynthCRDT("A");
-    const b = new DrumSynthCRDT("B");
+    const a = makeDrumSynthCRDT("A");
+    const b = makeDrumSynthCRDT("B");
 
     a.tracks[0].sequence.toggleStep(1);
     a.globalSettings.setBPM(150);

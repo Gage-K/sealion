@@ -3,3 +3,9 @@
 .git
 .claude
 *.log
+
+# Local SQLite rooms store — never bake a dev database into the image.
+**/data
+*.db
+*.db-wal
+*.db-shm

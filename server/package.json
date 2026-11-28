@@ -5,11 +5,14 @@
   "main": "app.js",
   "type": "module",
   "scripts": {
-    "dev": "node app.js",
-    "start": "node app.js"
+    "dev": "tsx watch app.js",
+    "start": "tsx app.js"
   },
   "license": "ISC",
   "dependencies": {
+    "@sealion/crdt": "workspace:*",
+    "better-sqlite3": "^11.10.0",
+    "tsx": "^4.23.15",
     "ws": "^8.18.3"
   }
 }

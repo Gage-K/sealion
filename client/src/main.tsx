@@ -1,19 +1,12 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import App from "./App.tsx";
-import { CRDTProvider } from "./contexts/CRDTContext.tsx";
-import { SyncProvider } from "./sync/SyncProvider.tsx";
-import { AudioEngineProvider } from "./contexts/AudioEngineContext.tsx";
+import Root from "./Root.tsx";
 
+// Routing picks the lobby or a room; each room owns its own provider stack
+// (CRDT / sync / audio), mounted in RoomView after a room is chosen.
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <CRDTProvider>
-      <SyncProvider>
-        <AudioEngineProvider>
-          <App />
-        </AudioEngineProvider>
-      </SyncProvider>
-    </CRDTProvider>
+    <Root />
   </StrictMode>
 );

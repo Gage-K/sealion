@@ -28,6 +28,12 @@ dist-ssr
 notes.md
 .env
 
+# Server SQLite data (rooms store; durable but machine-local)
+data/
+*.db
+*.db-wal
+*.db-shm
+
 # Local deploy runbook (infra notes, kept out of the repo)
 docs/deploy.md
 
